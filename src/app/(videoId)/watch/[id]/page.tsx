@@ -43,12 +43,13 @@ const VideoDetails = () => {
 
   return (
     <div className="mb-9">
-      <div className="px-4 h-[80vh] mt-16">
+      <div className="px-4 h-[80vh] mt-[64px]">
         <ReactPlayer
           url={videoDetails?.videoUrl}
           width="100%"
           height="100%"
           playing={true}
+          controls={true}
         />
       </div>
 
@@ -89,7 +90,7 @@ const VideoDetails = () => {
             </div>
           </div>
           <div className="p-3 bg-gray-600 text-white rounded-md my-4">
-            <p className="leading-8">
+            <p className="leading-8 text-sm">
               {videoDetails?.description.substring(0, substringCount)}{" "}
               <span
                 onClick={
@@ -121,7 +122,7 @@ const VideoDetails = () => {
                     }
                     className="w-full min-h-[80px] p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                   />
-                  <div className="flex justify-end space-x-2">
+                  <div className="flex justify-end space-x-2 mt-2">
                     <Button
                       variant="ghost"
                       size="sm"

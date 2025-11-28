@@ -1,9 +1,9 @@
-import axios from 'axios';
+import axios from "axios";
 
-import { Video } from '../../types/custom_types';
+import { Video } from "../../types/custom_types";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
+const BASE_URL = "https://www.googleapis.com/youtube/v3";
+const API_KEY = "AIzaSyCqPx4sUNlBQ-Px7uP0C21tY8sB7ypRp-Q";
 
 export async function fetchVideos(query: string, maxResult: number) {
   try {
@@ -52,7 +52,7 @@ export async function fetchVideos(query: string, maxResult: number) {
 
     return videos;
   } catch (error: any) {
-    console.log('ERROR FETCHING VIDEOS', error.response.data);
+    console.log("ERROR FETCHING VIDEOS", error.response.data);
     throw error;
   }
 }
@@ -69,7 +69,7 @@ export async function fetchVideoDetails(videoId: string) {
 
     const videoDetails = {
       title: videoData.title,
-      videoUrl: `${process.env.NEXT_PUBLIC_VIDEO_BASE_URL}${videoId}`,
+      videoUrl: `https://www.youtube.com/watch?v=${videoId}`,
       likes: data.items[0].statistics.likeCount,
       description: videoData.description,
       publishedDate: videoData.publishedAt,
@@ -80,7 +80,7 @@ export async function fetchVideoDetails(videoId: string) {
 
     return videoDetails;
   } catch (error) {
-    console.error('ERROR FETCHING VIDEO DETAILS', error);
+    console.error("ERROR FETCHING VIDEO DETAILS", error);
   }
 }
 
@@ -116,7 +116,7 @@ export async function fetchChannel(channelId: string) {
 
     return channelData;
   } catch (error) {
-    console.error('Error searching for the channel', error);
+    console.error("Error searching for the channel", error);
   }
 }
 
@@ -132,7 +132,7 @@ export async function fetchChannelVideos(channelId: string) {
 
     return channelVideos;
   } catch (error) {
-    console.error('Error searching for the channel', error);
+    console.error("Error searching for the channel", error);
   }
 }
 
@@ -147,7 +147,7 @@ export async function fetchChannelPlaylistId(channelId: string) {
 
     return channelPlaylistId;
   } catch (error) {
-    console.error('Error searching for the channel', error);
+    console.error("Error searching for the channel", error);
   }
 }
 
@@ -159,6 +159,6 @@ export async function fetchSearchQuery(searchQuery: string) {
 
     return data;
   } catch (error) {
-    console.error('Error with the search query', error);
+    console.error("Error with the search query", error);
   }
 }
