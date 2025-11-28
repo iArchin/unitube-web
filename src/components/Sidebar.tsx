@@ -93,7 +93,7 @@ const Sidebar = ({ className }: Props) => {
           <div className="space-y-1">
             <Button variant="ghost" className="w-full justify-start font-light">
               <UserCircle size={24} className="mr-3" />
-              Codewithlari
+              Unitube
             </Button>
           </div>
         </div>

@@ -60,7 +60,7 @@ const Search = () => {
 
             <div className='my-6 flex items-center space-x-3'>
               <Avatar className='w-11 h-11'>
-                <AvatarImage src='/channel_profile.jpeg' alt='codewithlari' />
+                <AvatarImage src='/channel_profile.jpeg' alt='unitube' />
                 <AvatarFallback>AB</AvatarFallback>
               </Avatar>
 

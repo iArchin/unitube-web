@@ -63,9 +63,9 @@ const TopNavigation = () => {
               type="search"
               placeholder="Search"
               ref={searchInputRef}
-              className="px-4 h-full md:w-48 lg:w-96 border dark:border-gray-50 border-gray-300 rounded-l-full focus:outline-none"
+              className="px-4 h-full md:w-48 lg:w-96 border-[1px] dark:border-[#575757] border-gray-300 rounded-l-full focus:outline-none"
             />
-            <div className="h-full px-5 grid place-content-center bg-background-light text-black rounded-r-full">
+            <div className="h-full px-5 grid place-content-center cursor-pointer bg-[#575757]  rounded-r-full">
               <Search size={24} />
             </div>
           </form>
@@ -105,7 +105,6 @@ const TopNavigation = () => {
             <DropdownMenu>
               <DropdownMenuTrigger className="focus:outline-none">
                 <Avatar className="w-8 h-8">
-                  <AvatarImage src="channel_profile.jpeg" alt="codewithlari" />
                   <AvatarFallback>AB</AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
@@ -113,17 +112,13 @@ const TopNavigation = () => {
                 <DropdownMenuLabel>
                   <div className="flex space-x-4">
                     <Avatar>
-                      <AvatarImage
-                        src="/channel_profile.jpeg"
-                        alt="codewithlari"
-                      />
                       <AvatarFallback>AB</AvatarFallback>
                     </Avatar>
 
                     <div className="flex flex-col space-y-3 text-base">
                       <span>
-                        <p>code with lari</p>
-                        <p>@codewithlari</p>
+                        <p>Unitube</p>
+                        <p>@unitube</p>
                       </span>
                       <Link
                         href={`/channels/${process.env.NEXT_PUBLIC_CHANNEL_ID}`}
