@@ -11,8 +11,9 @@ import ContextProvider from "@/components/ContextProvider";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Youtube Clone",
-  description: "Youtube",
+  title: "UniTube",
+  description:
+    "UniTube is a video streaming platform that allows you to watch videos from your favorite channels.",
 };
 
 export default function RootLayout({
