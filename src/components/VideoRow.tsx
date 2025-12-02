@@ -26,12 +26,16 @@ const VideoRow = ({ title, videos, onViewAll }: VideoRowProps) => {
       </div>
 
       {/* Horizontal Scrollable Row */}
-      <div className="flex overflow-x-auto scrollbar-hide pb-4 px-2">
-        <div className="flex gap-4">
-          {videos.map((video) => (
-            <HorizontalThumbnail key={video.id} video={video} />
-          ))}
+      <div className="relative px-2">
+        <div className="flex overflow-x-auto scrollbar-hide pb-4">
+          <div className="flex gap-4">
+            {videos.map((video) => (
+              <HorizontalThumbnail key={video.id} video={video} />
+            ))}
+          </div>
         </div>
+        {/* Fade effect on the right side */}
+        <div className="absolute right-2 top-0 bottom-4 w-32 pointer-events-none z-10 bg-gradient-to-l from-[#111111] via-[#111111]/60 to-transparent" />
       </div>
     </div>
   );
