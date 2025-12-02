@@ -10,9 +10,9 @@ const Thumbnail = ({ video }: { video: Video }) => {
   return (
     <Link
       href={`/watch/${video.id}`}
-      className="w-[320px] mx-auto md:w-[350px] my-4"
+      className="w-[300px] mx-auto md:w-[300px] my-4"
     >
-      <div className="h-52 overflow-hidden rounded-2xl bg-slate-300">
+      <div className="h-44 overflow-hidden rounded-2xl bg-slate-300">
         <Image
           src={video.thumbnail}
           alt={video.title}

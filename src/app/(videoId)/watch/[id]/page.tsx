@@ -75,7 +75,7 @@ const VideoDetails = () => {
                   </p>
                 </div>
               </div>
-              <div className="flex space-x-4 text-sm items-center bg-gray-600 text-white px-2 md:px-5 rounded-3xl">
+              <div className="flex space-x-4 text-sm items-center bg-[#111111] text-white px-2 md:px-5 rounded-3xl">
                 <button className="flex items-center space-x-2 hover:text-blue-500">
                   <ThumbsUp className="w-6" />
                   <span className="text-[14px]">

@@ -23,7 +23,7 @@ export default function Home() {
 
   return (
     <>
-      <div className="px-2 md:pl-[252px] fixed top-16 py-2 left-0 w-screen z-20 dark:bg-[#111111] bg-white">
+      <div className="px-2 md:pl-[90px] fixed top-16 py-2 left-0 w-screen z-20 dark:bg-[#111111] bg-white">
         <SearchBadge
           badges={["All", "Javascript", "Algorithms"]}
           currentBadge={badge}
@@ -31,7 +31,7 @@ export default function Home() {
         />
       </div>
 
-      <div className="flex flex-wrap bg-[#111111]">
+      <div className="flex flex-wrap p-2 bg-[#111111]">
         {isLoading &&
           Array(9)
             .fill(null)

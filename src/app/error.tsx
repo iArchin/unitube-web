@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect } from 'react';
+import { useEffect } from "react";
 
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
 
 export default function Error({
   error,
@@ -16,12 +16,12 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className='grid place-content-center w-screen h-screen'>
-      <p className='font-semibold text-2xl mb-3'>{error.message}</p>
+    <div className="grid place-content-center w-screen h-screen bg-[#111111]">
+      <p className="font-semibold text-2xl mb-3">{error.message}</p>
       <Button
         onClick={() => reset()}
-        variant='destructive'
-        className='w-fit mx-auto'
+        variant="destructive"
+        className="w-fit mx-auto"
       >
         Try Again
       </Button>
