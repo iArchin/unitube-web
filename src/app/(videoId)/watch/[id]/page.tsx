@@ -8,7 +8,7 @@ import { formatCount, formatPublishedDate } from "@/lib/utils";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import RelatedVideos from "@/components/RelatedVideos";
 import { generateMockVideos } from "@/lib/mockData";
-import { Video } from "../../../../types/custom_types";
+import { Video } from "../../../../../types/custom_types";
 import { Button } from "@/components/ui/button";
 
 // Dynamically import react-player to avoid SSR issues
