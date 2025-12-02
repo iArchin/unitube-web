@@ -37,17 +37,7 @@ const Sidebar = ({ className }: Props) => {
                 <div className="w-full h-full bg-purple-600"></div>
                 <div className="w-full h-full bg-purple-500"></div>
               </div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span
-                  className="text-white text-[10px] font-black leading-none"
-                  style={{
-                    fontFamily: "monospace",
-                    textShadow: "0 0 2px rgba(0,0,0,0.5)",
-                  }}
-                >
-                  X
-                </span>
-              </div>
+              <div className="absolute inset-0 flex items-center justify-center"></div>
             </div>
           </div>
         </Link>
@@ -58,8 +48,8 @@ const Sidebar = ({ className }: Props) => {
             className={cn(
               "w-12 h-12 p-0 flex justify-center items-center transition-colors rounded-lg",
               activeItem === "home"
-                ? "bg-purple-500/20 text-purple-400"
-                : "text-gray-400 hover:bg-[#1a1a1a] hover:text-white"
+                ? " text-purple-400"
+                : "text-gray-400  hover:text-white"
             )}
           >
             <Home size={24} />
@@ -71,8 +61,8 @@ const Sidebar = ({ className }: Props) => {
           className={cn(
             "w-12 h-12 p-0 flex justify-center items-center transition-colors rounded-lg relative",
             activeItem === "plus"
-              ? "bg-purple-500/20 text-purple-400"
-              : "text-gray-400 hover:bg-[#1a1a1a] hover:text-white"
+              ? " text-purple-400"
+              : "text-gray-400  hover:text-white"
           )}
         >
           <div className="relative">
@@ -86,8 +76,8 @@ const Sidebar = ({ className }: Props) => {
           className={cn(
             "w-12 h-12 p-0 flex justify-center items-center transition-colors rounded-lg",
             activeItem === "credit"
-              ? "bg-purple-500/20 text-purple-400"
-              : "text-gray-400 hover:bg-[#1a1a1a] hover:text-white"
+              ? " text-purple-400"
+              : "text-gray-400  hover:text-white"
           )}
         >
           <CreditCard size={24} />
@@ -98,8 +88,8 @@ const Sidebar = ({ className }: Props) => {
           className={cn(
             "w-12 h-12 p-0 flex justify-center items-center transition-colors rounded-lg",
             activeItem === "star"
-              ? "bg-purple-500/20 text-purple-400"
-              : "text-gray-400 hover:bg-[#1a1a1a] hover:text-white"
+              ? " text-purple-400"
+              : "text-gray-400  hover:text-white"
           )}
         >
           <Star size={24} />
@@ -110,8 +100,8 @@ const Sidebar = ({ className }: Props) => {
           className={cn(
             "w-12 h-12 p-0 flex justify-center items-center transition-colors rounded-lg",
             activeItem === "settings"
-              ? "bg-purple-500/20 text-purple-400"
-              : "text-gray-400 hover:bg-[#1a1a1a] hover:text-white"
+              ? " text-purple-400"
+              : "text-gray-400  hover:text-white"
           )}
         >
           <Settings size={24} />

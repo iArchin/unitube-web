@@ -413,3 +413,35 @@ export async function fetchSearchQuery(searchQuery: string) {
     handleAPIError(error, "fetchSearchQuery");
   }
 }
+
+export async function fetchVideosByCategory(
+  category: string,
+  maxResult: number
+): Promise<Video[]> {
+  if (!category?.trim()) {
+    throw new ValidationError("Category cannot be empty");
+  }
+
+  if (maxResult < 1 || maxResult > 50) {
+    throw new ValidationError("maxResult must be between 1 and 50");
+  }
+
+  // Map category names to appropriate search queries
+  const categoryQueries: Record<string, string> = {
+    trending: "trending",
+    sports: "sports highlights",
+    music: "music videos",
+    gaming: "gaming",
+    news: "news",
+    technology: "technology",
+    entertainment: "entertainment",
+    education: "educational content",
+    science: "science",
+    comedy: "comedy",
+  };
+
+  const searchQuery = categoryQueries[category.toLowerCase()] || category;
+
+  // Use the existing fetchVideos function with the category-specific query
+  return fetchVideos(searchQuery, maxResult);
+}
