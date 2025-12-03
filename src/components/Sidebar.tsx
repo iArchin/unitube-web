@@ -18,6 +18,20 @@ const Sidebar = ({ className }: Props) => {
       setActiveItem("home");
     } else if (pathname.startsWith("/channels")) {
       setActiveItem("channel");
+    } else if (pathname.startsWith("/create")) {
+      setActiveItem("plus");
+    } else if (pathname.startsWith("/subscription")) {
+      setActiveItem("credit");
+    } else if (pathname.startsWith("/favorites")) {
+      setActiveItem("star");
+    } else if (pathname.startsWith("/settings")) {
+      setActiveItem("settings");
+    } else if (
+      pathname.startsWith("/top") ||
+      pathname.startsWith("/games") ||
+      pathname.startsWith("/teams")
+    ) {
+      setActiveItem("home"); // Top nav pages use home icon
     }
   }, [pathname]);
   return (
@@ -55,57 +69,65 @@ const Sidebar = ({ className }: Props) => {
             <Home size={24} />
           </Button>
         </Link>
-        <Button
-          onClick={() => setActiveItem("plus")}
-          variant="ghost"
-          className={cn(
-            "w-12 h-12 p-0 flex justify-center items-center transition-colors rounded-lg relative",
-            activeItem === "plus"
-              ? " text-purple-400"
-              : "text-gray-400  hover:text-white"
-          )}
-        >
-          <div className="relative">
-            <div className="absolute inset-0 border-2 border-current rounded-sm opacity-50"></div>
-            <Plus size={20} className="relative" />
-          </div>
-        </Button>
-        <Button
-          onClick={() => setActiveItem("credit")}
-          variant="ghost"
-          className={cn(
-            "w-12 h-12 p-0 flex justify-center items-center transition-colors rounded-lg",
-            activeItem === "credit"
-              ? " text-purple-400"
-              : "text-gray-400  hover:text-white"
-          )}
-        >
-          <CreditCard size={24} />
-        </Button>
-        <Button
-          onClick={() => setActiveItem("star")}
-          variant="ghost"
-          className={cn(
-            "w-12 h-12 p-0 flex justify-center items-center transition-colors rounded-lg",
-            activeItem === "star"
-              ? " text-purple-400"
-              : "text-gray-400  hover:text-white"
-          )}
-        >
-          <Star size={24} />
-        </Button>
-        <Button
-          onClick={() => setActiveItem("settings")}
-          variant="ghost"
-          className={cn(
-            "w-12 h-12 p-0 flex justify-center items-center transition-colors rounded-lg",
-            activeItem === "settings"
-              ? " text-purple-400"
-              : "text-gray-400  hover:text-white"
-          )}
-        >
-          <Settings size={24} />
-        </Button>
+        <Link href="/create">
+          <Button
+            onClick={() => setActiveItem("plus")}
+            variant="ghost"
+            className={cn(
+              "w-12 h-12 p-0 flex justify-center items-center transition-colors rounded-lg relative",
+              activeItem === "plus"
+                ? " text-purple-400"
+                : "text-gray-400  hover:text-white"
+            )}
+          >
+            <div className="relative">
+              <div className="absolute inset-0 border-2 border-current rounded-sm opacity-50"></div>
+              <Plus size={20} className="relative" />
+            </div>
+          </Button>
+        </Link>
+        <Link href="/subscription">
+          <Button
+            onClick={() => setActiveItem("credit")}
+            variant="ghost"
+            className={cn(
+              "w-12 h-12 p-0 flex justify-center items-center transition-colors rounded-lg",
+              activeItem === "credit"
+                ? " text-purple-400"
+                : "text-gray-400  hover:text-white"
+            )}
+          >
+            <CreditCard size={24} />
+          </Button>
+        </Link>
+        <Link href="/favorites">
+          <Button
+            onClick={() => setActiveItem("star")}
+            variant="ghost"
+            className={cn(
+              "w-12 h-12 p-0 flex justify-center items-center transition-colors rounded-lg",
+              activeItem === "star"
+                ? " text-purple-400"
+                : "text-gray-400  hover:text-white"
+            )}
+          >
+            <Star size={24} />
+          </Button>
+        </Link>
+        <Link href="/settings">
+          <Button
+            onClick={() => setActiveItem("settings")}
+            variant="ghost"
+            className={cn(
+              "w-12 h-12 p-0 flex justify-center items-center transition-colors rounded-lg",
+              activeItem === "settings"
+                ? " text-purple-400"
+                : "text-gray-400  hover:text-white"
+            )}
+          >
+            <Settings size={24} />
+          </Button>
+        </Link>
       </div>
     </ScrollArea>
   );
