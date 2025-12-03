@@ -272,7 +272,7 @@ const VideoDetails = () => {
                         <p className="font-semibold text-sm text-white">
                           {comment.author}
                         </p>
-                        <span className="text-xs text-gray-400">
+                        <span className="text-[9px] text-gray-400">
                           {comment.timeAgo}
                         </span>
                       </div>
