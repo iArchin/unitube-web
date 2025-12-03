@@ -268,7 +268,7 @@ const VideoDetails = () => {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <div className="flex items-start gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1">
                         <p className="font-semibold text-sm text-white">
                           {comment.author}
                         </p>
