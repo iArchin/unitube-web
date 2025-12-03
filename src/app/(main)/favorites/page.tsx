@@ -25,7 +25,7 @@ export default function FavoritesPage() {
             My Favorites
           </h1>
         </div>
-        <p className="text-gray-400 mb-8">Videos you've saved and liked</p>
+        <p className="text-gray-400 mb-8">Videos you&apos;ve saved and liked</p>
 
         {favoriteVideos.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
