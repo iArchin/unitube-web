@@ -8,14 +8,21 @@ import { formatCount, formatPublishedDate } from "@/lib/utils";
 
 const HorizontalThumbnail = ({ video }: { video: Video }) => {
   return (
-    <Link href={`/watch/${video.id}`} className="w-[280px] flex-shrink-0">
-      <div className="h-40 overflow-hidden rounded-xl">
+    <Link 
+      href={`/watch/${video.id}`} 
+      className="w-[280px] flex-shrink-0"
+      draggable="false"
+      onDragStart={(e) => e.preventDefault()}
+    >
+      <div className="h-40 overflow-hidden rounded-xl select-none">
         <Image
           src={video.thumbnail}
           alt={video.title}
           width={500}
           height={500}
-          className="w-full h-full object-cover hover:scale-105 transition-all duration-300"
+          draggable={false}
+          className="w-full h-full object-cover hover:scale-105 transition-all duration-300 select-none"
+          onDragStart={(e) => e.preventDefault()}
         />
       </div>
       <div className="flex space-x-2 py-2">
@@ -23,6 +30,8 @@ const HorizontalThumbnail = ({ video }: { video: Video }) => {
           <AvatarImage
             src={video.channel.channelImage}
             alt={video.channel.channelTitle}
+            draggable={false}
+            onDragStart={(e) => e.preventDefault()}
           />
           <AvatarFallback className="text-xs">AB</AvatarFallback>
         </Avatar>
