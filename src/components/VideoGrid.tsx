@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import VideoRow from "./VideoRow";
 import { generateMockVideos } from "@/lib/mockData";
 
@@ -11,9 +12,10 @@ interface VideoGridProps {
 const VideoGrid = ({
   categories = ["trending", "sports", "music", "gaming", "news"],
 }: VideoGridProps) => {
+  const router = useRouter();
+  
   const handleViewAll = (category: string) => {
-    // TODO: Implement navigation to category page
-    console.log(`View all ${category} videos`);
+    router.push(`/top?category=${category}`);
   };
 
   return (

@@ -56,13 +56,13 @@ const TopNavigation = () => {
               TOP STREAMING
             </Link>
             <Link
-              href="/games"
+              href="/top?category=gaming"
               className="text-sm font-medium text-white hover:text-purple-400 transition-colors"
             >
               GAMES
             </Link>
             <Link
-              href="/teams"
+              href="/top?category=sports"
               className="text-sm font-medium text-white hover:text-purple-400 transition-colors"
             >
               TEAMS
