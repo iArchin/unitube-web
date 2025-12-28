@@ -10,16 +10,19 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import AuthModal from "@/components/AuthModal";
 import AppContext from "@/context/appContext";
+import { useAppSelector } from "@/store/hooks";
 
 const TopNavigation = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
 
   const router = useRouter();
 
@@ -120,49 +123,97 @@ const TopNavigation = () => {
                 </form>
               </DialogContent>
             </Dialog>
-          </div>
-          <div className="hidden md:block">
-            <DropdownMenu>
-              <DropdownMenuTrigger className="focus:outline-none">
-                <Avatar className="w-8 h-8 cursor-pointer border-2 border-purple-500">
-                  <AvatarFallback className="bg-purple-500 text-white">
-                    M
-                  </AvatarFallback>
-                </Avatar>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-72 bg-[#1a1a1a] border-[#333]">
-                <DropdownMenuLabel className="text-white">
-                  <div className="flex space-x-4">
-                    <Avatar>
-                      <AvatarFallback className="bg-purple-500 text-white">
-                        M
-                      </AvatarFallback>
-                    </Avatar>
+            {!isAuthenticated && (
+              <Button
+                onClick={() => setAuthModalOpen(true)}
+                className="bg-purple-600 hover:bg-purple-700 text-white text-sm"
+              >
+                Sign In
+              </Button>
+            )}
+            {isAuthenticated && (
+              <DropdownMenu>
+                <DropdownMenuTrigger className="focus:outline-none">
+                  <Avatar className="w-8 h-8 cursor-pointer border-2 border-purple-500">
+                    <AvatarFallback className="bg-purple-500 text-white">
+                      {user?.name?.charAt(0).toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-72 bg-[#1a1a1a] border-[#333]">
+                  <DropdownMenuLabel className="text-white">
+                    <div className="flex space-x-4">
+                      <Avatar>
+                        <AvatarFallback className="bg-purple-500 text-white">
+                          {user?.name?.charAt(0).toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
 
-                    <div className="flex flex-col space-y-3 text-base">
-                      <span>
-                        <p className="text-white">Mikael</p>
-                        <p className="text-gray-400">@mikael</p>
-                      </span>
-                      <Link
-                        href={`/channels/${process.env.NEXT_PUBLIC_CHANNEL_ID}`}
-                        className="text-purple-400 hover:text-purple-300"
-                      >
-                        View your channel
-                      </Link>
+                      <div className="flex flex-col space-y-3 text-base">
+                        <span>
+                          <p className="text-white">{user?.name || "User"}</p>
+                          <p className="text-gray-400">{user?.email}</p>
+                        </span>
+                        <Link
+                          href={`/channels/${process.env.NEXT_PUBLIC_CHANNEL_ID}`}
+                          className="text-purple-400 hover:text-purple-300"
+                        >
+                          View your channel
+                        </Link>
+                      </div>
                     </div>
-                  </div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator className="bg-[#333]" />
-                <div className="p-2 flex items-center">
-                  <span className="mr-2 text-white"> Appearance: </span>{" "}
-                  <ThemeToggle />
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  </DropdownMenuLabel>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+          <div className="hidden md:flex items-center space-x-4">
+            {!isAuthenticated ? (
+              <Button
+                onClick={() => setAuthModalOpen(true)}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                Sign In
+              </Button>
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger className="focus:outline-none">
+                  <Avatar className="w-8 h-8 cursor-pointer border-2 border-purple-500">
+                    <AvatarFallback className="bg-purple-500 text-white">
+                      {user?.name?.charAt(0).toUpperCase() || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-72 bg-[#1a1a1a] border-[#333]">
+                  <DropdownMenuLabel className="text-white">
+                    <div className="flex space-x-4">
+                      <Avatar>
+                        <AvatarFallback className="bg-purple-500 text-white">
+                          {user?.name?.charAt(0).toUpperCase() || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+
+                      <div className="flex flex-col space-y-3 text-base">
+                        <span>
+                          <p className="text-white">{user?.name || "User"}</p>
+                          <p className="text-gray-400">{user?.email}</p>
+                        </span>
+                        <Link
+                          href={`/channels/${process.env.NEXT_PUBLIC_CHANNEL_ID}`}
+                          className="text-purple-400 hover:text-purple-300"
+                        >
+                          View your channel
+                        </Link>
+                      </div>
+                    </div>
+                  </DropdownMenuLabel>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         </div>
       </div>
+      <AuthModal open={authModalOpen} onOpenChange={setAuthModalOpen} />
     </nav>
   );
 };

@@ -7,6 +7,7 @@ import TopNavigation from "@/components/TopNavigation";
 import Sidebar from "@/components/Sidebar";
 import FooterMenu from "@/components/FooterMenu";
 import ContextProvider from "@/components/ContextProvider";
+import ReduxProvider from "@/components/ReduxProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,19 +25,21 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <ContextProvider>
-            <main className="pt-0">{children}</main>
-            <TopNavigation />
-            <Sidebar />
-            <FooterMenu />
-          </ContextProvider>
-        </ThemeProvider>
+        <ReduxProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <ContextProvider>
+              <main className="pt-0">{children}</main>
+              <TopNavigation />
+              <Sidebar />
+              <FooterMenu />
+            </ContextProvider>
+          </ThemeProvider>
+        </ReduxProvider>
       </body>
     </html>
   );
