@@ -1,9 +1,145 @@
 "use client";
 
-import { Upload, Video, Image as ImageIcon, Link2, FileText } from "lucide-react";
+import { useState } from "react";
+import { Upload, Video, Image as ImageIcon, Link2, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { uploadVideo, UploadVideoData } from "@/lib/api";
+import { useAppSelector } from "@/store/hooks";
+import { useRouter } from "next/navigation";
 
 export default function CreatePage() {
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [formData, setFormData] = useState<{
+    title: string;
+    description: string;
+    video_type: string;
+    file: File | null;
+  }>({
+    title: "",
+    description: "",
+    video_type: "video", // default value
+    file: null,
+  });
+
+  const { token, isAuthenticated } = useAppSelector((state) => state.auth);
+  const router = useRouter();
+
+  const resetForm = () => {
+    setFormData({
+      title: "",
+      description: "",
+      video_type: "video",
+      file: null,
+    });
+    setUploadError(null);
+    setUploadProgress(0);
+    // Reset file input
+    const fileInput = document.getElementById("file") as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = "";
+    }
+  };
+
+  const handleDialogChange = (open: boolean) => {
+    setIsUploadDialogOpen(open);
+    if (!open) {
+      // Reset form when dialog closes
+      resetForm();
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("video/")) {
+        setUploadError("Please select a valid video file");
+        return;
+      }
+      // Validate file size (e.g., max 500MB)
+      if (file.size > 500 * 1024 * 1024) {
+        setUploadError("File size must be less than 500MB");
+        return;
+      }
+      setFormData({ ...formData, file });
+      setUploadError(null);
+    }
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+    setUploadError(null);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUploadError(null);
+    setUploadProgress(0);
+
+    if (!isAuthenticated || !token) {
+      setUploadError("Please log in to upload videos");
+      return;
+    }
+
+    if (!formData.file) {
+      setUploadError("Please select a video file");
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const uploadData: UploadVideoData = {
+        title: formData.title,
+        description: formData.description,
+        video_type: formData.video_type,
+        file: formData.file,
+      };
+
+      const response = await uploadVideo(
+        uploadData,
+        token,
+        (progress) => {
+          setUploadProgress(progress);
+        }
+      );
+      
+      // Reset form and close dialog
+      resetForm();
+      setIsUploadDialogOpen(false);
+      
+      // Optionally redirect or show success message
+      // You can add a toast notification here if you have one
+      console.log("Video uploaded successfully:", response);
+      
+      // Refresh the page or navigate to the video
+      router.refresh();
+    } catch (error: any) {
+      setUploadError(
+        error.message || "Failed to upload video. Please try again."
+      );
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
   return (
     <div className="min-h-screen py-8 px-4 md:px-8">
       <div className="max-w-4xl mx-auto">
@@ -12,19 +148,161 @@ export default function CreatePage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Upload Video Card */}
-          <div className="bg-[#1a1a1a] rounded-xl p-8 border border-[#333] hover:border-purple-500 transition-colors cursor-pointer">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mb-4">
-                <Video className="w-8 h-8 text-purple-400" />
+          <Dialog open={isUploadDialogOpen} onOpenChange={handleDialogChange}>
+            <DialogTrigger asChild>
+              <div className="bg-[#1a1a1a] rounded-xl p-8 border border-[#333] hover:border-purple-500 transition-colors cursor-pointer">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mb-4">
+                    <Video className="w-8 h-8 text-purple-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-2">Upload Video</h3>
+                  <p className="text-gray-400 text-sm mb-4">Share your video content</p>
+                  <Button className="bg-purple-500 hover:bg-purple-600 text-white">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Upload Video
+                  </Button>
+                </div>
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Upload Video</h3>
-              <p className="text-gray-400 text-sm mb-4">Share your video content</p>
-              <Button className="bg-purple-500 hover:bg-purple-600 text-white">
-                <Upload className="w-4 h-4 mr-2" />
-                Upload Video
-              </Button>
-            </div>
-          </div>
+            </DialogTrigger>
+            <DialogContent className="bg-[#1a1a1a] border-[#333] text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-2xl">Upload Video</DialogTitle>
+                <DialogDescription className="text-gray-400">
+                  Fill in the details below to upload your video
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="title" className="text-sm font-medium text-white">
+                    Title *
+                  </label>
+                  <Input
+                    id="title"
+                    name="title"
+                    type="text"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    placeholder="Enter video title"
+                    required
+                    className="bg-[#2a2a2a] border-[#444] text-white placeholder:text-gray-500"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="description" className="text-sm font-medium text-white">
+                    Description *
+                  </label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    placeholder="Enter video description"
+                    required
+                    rows={4}
+                    className="flex w-full rounded-md border border-[#444] bg-[#2a2a2a] px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label htmlFor="file" className="text-sm font-medium text-white">
+                    Video File *
+                  </label>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center w-full">
+                      <label
+                        htmlFor="file"
+                        className="flex flex-col items-center justify-center w-full h-32 border-2 border-[#444] border-dashed rounded-lg cursor-pointer bg-[#2a2a2a] hover:bg-[#333] transition-colors"
+                      >
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <Upload className="w-8 h-8 mb-2 text-gray-400" />
+                          <p className="mb-2 text-sm text-gray-400">
+                            <span className="font-semibold">Click to upload</span> or drag and drop
+                          </p>
+                          <p className="text-xs text-gray-500">MP4, AVI, MOV, etc. (MAX. 500MB)</p>
+                        </div>
+                        <input
+                          id="file"
+                          name="file"
+                          type="file"
+                          accept="video/*"
+                          onChange={handleFileChange}
+                          required
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                    {formData.file && (
+                      <div className="p-3 rounded-md bg-[#2a2a2a] border border-[#444]">
+                        <p className="text-sm text-white font-medium">
+                          {formData.file.name}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {(formData.file.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {isUploading && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-white font-medium">Uploading...</span>
+                      <span className="text-gray-400">{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-[#2a2a2a] rounded-full h-2.5 border border-[#444]">
+                      <div
+                        className="bg-purple-500 h-2.5 rounded-full transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
+
+                {uploadError && (
+                  <div className="p-3 rounded-md bg-red-500/20 border border-red-500/50 text-red-400 text-sm">
+                    {uploadError}
+                  </div>
+                )}
+
+                {!isAuthenticated && (
+                  <div className="p-3 rounded-md bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 text-sm">
+                    Please log in to upload videos
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleDialogChange(false)}
+                    disabled={isUploading}
+                    className="border-[#444] text-white hover:bg-[#2a2a2a]"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isUploading || !isAuthenticated}
+                    className="bg-purple-500 hover:bg-purple-600 text-white"
+                  >
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Video
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
 
           {/* Create Short Card */}
           <div className="bg-[#1a1a1a] rounded-xl p-8 border border-[#333] hover:border-purple-500 transition-colors cursor-pointer">

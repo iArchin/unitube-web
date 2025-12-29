@@ -445,3 +445,68 @@ export async function fetchVideosByCategory(
   // Use the existing fetchVideos function with the category-specific query
   return fetchVideos(searchQuery, maxResult);
 }
+
+export interface UploadVideoData {
+  title: string;
+  description: string;
+  video_type: string;
+  file: File;
+}
+
+export async function uploadVideo(
+  data: UploadVideoData,
+  token: string,
+  onProgress?: (progress: number) => void
+): Promise<any> {
+  if (!data.title?.trim()) {
+    throw new ValidationError("Title cannot be empty");
+  }
+
+  if (!data.description?.trim()) {
+    throw new ValidationError("Description cannot be empty");
+  }
+
+  if (!data.video_type?.trim()) {
+    throw new ValidationError("Video type cannot be empty");
+  }
+
+  if (!data.file) {
+    throw new ValidationError("Video file is required");
+  }
+
+  if (!token?.trim()) {
+    throw new ValidationError("Authentication token is required");
+  }
+
+  try {
+    const formData = new FormData();
+    formData.append("title", data.title);
+    formData.append("description", data.description);
+    formData.append("video_type", data.video_type);
+    formData.append("file", data.file);
+
+    const res = await axios.post(
+      "https://api.unitribe.app/ut/api/videos",
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // Axios will set multipart boundary automatically
+        },
+        timeout: 300000, // 5 minutes timeout for large file uploads
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total && onProgress) {
+            const percentCompleted = Math.round(
+              (progressEvent.loaded * 100) / progressEvent.total
+            );
+            onProgress(percentCompleted);
+          }
+        },
+      }
+    );
+
+    return res.data;
+  } catch (error) {
+    handleAPIError(error, "uploadVideo");
+  }
+}
