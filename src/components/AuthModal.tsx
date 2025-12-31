@@ -2,7 +2,12 @@
 
 import { useState, FormEvent } from "react";
 import axios from "axios";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Mail, Lock, User, ArrowLeft } from "lucide-react";
@@ -21,17 +26,17 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
   const [view, setView] = useState<AuthView>("login");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
-  
+
   // Signup form state
   const [signupName, setSignupName] = useState("");
   const [signupEmail, setSignupEmail] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupConfirmPassword, setSignupConfirmPassword] = useState("");
-  
+
   // Forgot password form state
   const [forgotEmail, setForgotEmail] = useState("");
 
@@ -39,7 +44,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
-    
+
     try {
       const response = await axios.post(
         "https://api.unitribe.app/ut/api/login",
@@ -48,11 +53,11 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
           password: loginPassword,
         }
       );
-      
+
       // Login successful - store user and token in Redux
       const { user, token } = response.data;
       dispatch(setCredentials({ user, token }));
-      
+
       setIsLoading(false);
       // Reset form
       setLoginEmail("");
@@ -61,11 +66,11 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
       onOpenChange(false);
     } catch (error: any) {
       setIsLoading(false);
-      
+
       // Handle error response
       if (axios.isAxiosError(error) && error.response) {
         const errorData = error.response.data;
-        
+
         // Handle validation errors
         if (errorData.errors) {
           const errorMessages = Object.values(errorData.errors)
@@ -75,7 +80,9 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
         } else if (errorData.message) {
           setError(errorData.message);
         } else {
-          setError("Login failed. Please check your credentials and try again.");
+          setError(
+            "Login failed. Please check your credentials and try again."
+          );
         }
       } else {
         setError("Network error. Please check your connection and try again.");
@@ -86,14 +93,14 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
   const handleSignup = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
-    
+
     if (signupPassword !== signupConfirmPassword) {
       setError("Passwords do not match");
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       const response = await axios.post(
         "https://api.unitribe.app/ut/api/register",
@@ -104,11 +111,11 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
           password_confirmation: signupConfirmPassword,
         }
       );
-      
+
       // Registration successful - store user and token in Redux
       const { user, token } = response.data;
       dispatch(setCredentials({ user, token }));
-      
+
       setIsLoading(false);
       // Reset form
       setSignupName("");
@@ -119,11 +126,11 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
       onOpenChange(false);
     } catch (error: any) {
       setIsLoading(false);
-      
+
       // Handle error response
       if (axios.isAxiosError(error) && error.response) {
         const errorData = error.response.data;
-        
+
         // Handle validation errors
         if (errorData.errors) {
           const errorMessages = Object.values(errorData.errors)
@@ -144,10 +151,10 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
   const handleForgotPassword = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
+
     // TODO: Implement actual forgot password logic
     console.log("Forgot password:", { email: forgotEmail });
-    
+
     // Simulate API call
     setTimeout(() => {
       setIsLoading(false);
@@ -210,7 +217,10 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
             )}
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="login-email" className="text-sm font-medium text-gray-300">
+                <label
+                  htmlFor="login-email"
+                  className="text-sm font-medium text-gray-300"
+                >
                   Email
                 </label>
                 <div className="relative">
@@ -228,7 +238,10 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="login-password" className="text-sm font-medium text-gray-300">
+                <label
+                  htmlFor="login-password"
+                  className="text-sm font-medium text-gray-300"
+                >
                   Password
                 </label>
                 <div className="relative">
@@ -269,7 +282,9 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
                 <div className="w-full border-t border-[#333]"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-[#1a1a1a] text-gray-400">Or continue with</span>
+                <span className="px-2 bg-[#1a1a1a] text-gray-400">
+                  Or continue with
+                </span>
               </div>
             </div>
 
@@ -301,7 +316,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
             </Button>
 
             <div className="text-center text-sm text-gray-400">
-              Don't have an account?{" "}
+              Don&apos;t have an account?{" "}
               <button
                 onClick={switchToSignup}
                 className="text-purple-400 hover:text-purple-300 transition-colors font-medium"
@@ -321,7 +336,10 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
             )}
             <form onSubmit={handleSignup} className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="signup-name" className="text-sm font-medium text-gray-300">
+                <label
+                  htmlFor="signup-name"
+                  className="text-sm font-medium text-gray-300"
+                >
                   Full Name
                 </label>
                 <div className="relative">
@@ -339,7 +357,10 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="signup-email" className="text-sm font-medium text-gray-300">
+                <label
+                  htmlFor="signup-email"
+                  className="text-sm font-medium text-gray-300"
+                >
                   Email
                 </label>
                 <div className="relative">
@@ -357,7 +378,10 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="signup-password" className="text-sm font-medium text-gray-300">
+                <label
+                  htmlFor="signup-password"
+                  className="text-sm font-medium text-gray-300"
+                >
                   Password
                 </label>
                 <div className="relative">
@@ -375,7 +399,10 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="signup-confirm-password" className="text-sm font-medium text-gray-300">
+                <label
+                  htmlFor="signup-confirm-password"
+                  className="text-sm font-medium text-gray-300"
+                >
                   Confirm Password
                 </label>
                 <div className="relative">
@@ -406,7 +433,9 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
                 <div className="w-full border-t border-[#333]"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-[#1a1a1a] text-gray-400">Or continue with</span>
+                <span className="px-2 bg-[#1a1a1a] text-gray-400">
+                  Or continue with
+                </span>
               </div>
             </div>
 
@@ -460,12 +489,16 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
             </button>
 
             <p className="text-sm text-gray-400 text-center mb-4">
-              Enter your email address and we'll send you a link to reset your password.
+              Enter your email address and we&apos;ll send you a link to reset
+              your password.
             </p>
 
             <form onSubmit={handleForgotPassword} className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="forgot-email" className="text-sm font-medium text-gray-300">
+                <label
+                  htmlFor="forgot-email"
+                  className="text-sm font-medium text-gray-300"
+                >
                   Email
                 </label>
                 <div className="relative">
@@ -496,4 +529,3 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
     </Dialog>
   );
 }
-
