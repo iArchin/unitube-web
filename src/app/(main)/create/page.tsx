@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Upload, Video, Image as ImageIcon, Link2, FileText, Loader2 } from "lucide-react";
+import {
+  Upload,
+  Video,
+  Image as ImageIcon,
+  Link2,
+  FileText,
+  Loader2,
+  CheckCircle2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,6 +30,7 @@ export default function CreatePage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
   const [formData, setFormData] = useState<{
     title: string;
     description: string;
@@ -30,7 +39,7 @@ export default function CreatePage() {
   }>({
     title: "",
     description: "",
-    video_type: "video", // default value
+    video_type: "long", // default value
     file: null,
   });
 
@@ -41,11 +50,12 @@ export default function CreatePage() {
     setFormData({
       title: "",
       description: "",
-      video_type: "video",
+      video_type: "long",
       file: null,
     });
     setUploadError(null);
     setUploadProgress(0);
+    setUploadSuccess(false);
     // Reset file input
     const fileInput = document.getElementById("file") as HTMLInputElement;
     if (fileInput) {
@@ -80,7 +90,9 @@ export default function CreatePage() {
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -91,6 +103,7 @@ export default function CreatePage() {
     e.preventDefault();
     setUploadError(null);
     setUploadProgress(0);
+    setUploadSuccess(false);
 
     if (!isAuthenticated || !token) {
       setUploadError("Please log in to upload videos");
@@ -112,29 +125,33 @@ export default function CreatePage() {
         file: formData.file,
       };
 
-      const response = await uploadVideo(
-        uploadData,
-        token,
-        (progress) => {
-          setUploadProgress(progress);
-        }
-      );
-      
-      // Reset form and close dialog
-      resetForm();
-      setIsUploadDialogOpen(false);
-      
-      // Optionally redirect or show success message
-      // You can add a toast notification here if you have one
+      const response = await uploadVideo(uploadData, token, (progress) => {
+        setUploadProgress(progress);
+      });
+
+      // Check if status is 201
+      if (response.status === 201) {
+        setUploadSuccess(true);
+        setIsUploading(false);
+
+        // Wait a bit to show success message, then reset and close
+        setTimeout(() => {
+          resetForm();
+          setIsUploadDialogOpen(false);
+          router.refresh();
+        }, 2000);
+      } else {
+        // Reset form and close dialog for other success statuses
+        resetForm();
+        setIsUploadDialogOpen(false);
+        router.refresh();
+      }
+
       console.log("Video uploaded successfully:", response);
-      
-      // Refresh the page or navigate to the video
-      router.refresh();
     } catch (error: any) {
       setUploadError(
         error.message || "Failed to upload video. Please try again."
       );
-    } finally {
       setIsUploading(false);
       setUploadProgress(0);
     }
@@ -143,8 +160,12 @@ export default function CreatePage() {
   return (
     <div className="min-h-screen py-8 px-4 md:px-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">Create Content</h1>
-        <p className="text-gray-400 mb-8">Upload and share your videos with the world</p>
+        <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
+          Create Content
+        </h1>
+        <p className="text-gray-400 mb-8">
+          Upload and share your videos with the world
+        </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Upload Video Card */}
@@ -155,8 +176,12 @@ export default function CreatePage() {
                   <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mb-4">
                     <Video className="w-8 h-8 text-purple-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-white mb-2">Upload Video</h3>
-                  <p className="text-gray-400 text-sm mb-4">Share your video content</p>
+                  <h3 className="text-xl font-semibold text-white mb-2">
+                    Upload Video
+                  </h3>
+                  <p className="text-gray-400 text-sm mb-4">
+                    Share your video content
+                  </p>
                   <Button className="bg-purple-500 hover:bg-purple-600 text-white">
                     <Upload className="w-4 h-4 mr-2" />
                     Upload Video
@@ -173,7 +198,10 @@ export default function CreatePage() {
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <label htmlFor="title" className="text-sm font-medium text-white">
+                  <label
+                    htmlFor="title"
+                    className="text-sm font-medium text-white"
+                  >
                     Title *
                   </label>
                   <Input
@@ -189,7 +217,10 @@ export default function CreatePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="description" className="text-sm font-medium text-white">
+                  <label
+                    htmlFor="description"
+                    className="text-sm font-medium text-white"
+                  >
                     Description *
                   </label>
                   <textarea
@@ -205,7 +236,31 @@ export default function CreatePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="file" className="text-sm font-medium text-white">
+                  <label
+                    htmlFor="video_type"
+                    className="text-sm font-medium text-white"
+                  >
+                    Video Type *
+                  </label>
+                  <select
+                    id="video_type"
+                    name="video_type"
+                    value={formData.video_type}
+                    onChange={handleInputChange}
+                    required
+                    className="flex w-full rounded-md border border-[#444] bg-[#2a2a2a] px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="long">Long</option>
+                    <option value="short">Short</option>
+                    <option value="story">Story</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor="file"
+                    className="text-sm font-medium text-white"
+                  >
                     Video File *
                   </label>
                   <div className="space-y-2">
@@ -217,9 +272,14 @@ export default function CreatePage() {
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
                           <Upload className="w-8 h-8 mb-2 text-gray-400" />
                           <p className="mb-2 text-sm text-gray-400">
-                            <span className="font-semibold">Click to upload</span> or drag and drop
+                            <span className="font-semibold">
+                              Click to upload
+                            </span>{" "}
+                            or drag and drop
                           </p>
-                          <p className="text-xs text-gray-500">MP4, AVI, MOV, etc. (MAX. 500MB)</p>
+                          <p className="text-xs text-gray-500">
+                            MP4, AVI, MOV, etc. (MAX. 500MB)
+                          </p>
                         </div>
                         <input
                           id="file"
@@ -245,10 +305,12 @@ export default function CreatePage() {
                   </div>
                 </div>
 
-                {isUploading && (
+                {isUploading && !uploadSuccess && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-white font-medium">Uploading...</span>
+                      <span className="text-white font-medium">
+                        Uploading...
+                      </span>
                       <span className="text-gray-400">{uploadProgress}%</span>
                     </div>
                     <div className="w-full bg-[#2a2a2a] rounded-full h-2.5 border border-[#444]">
@@ -256,6 +318,22 @@ export default function CreatePage() {
                         className="bg-purple-500 h-2.5 rounded-full transition-all duration-300"
                         style={{ width: `${uploadProgress}%` }}
                       ></div>
+                    </div>
+                  </div>
+                )}
+
+                {uploadSuccess && (
+                  <div className="p-4 rounded-md bg-green-500/20 border border-green-500/50">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
+                      <div>
+                        <p className="text-green-400 font-medium text-sm">
+                          Upload Complete!
+                        </p>
+                        <p className="text-green-300/80 text-xs mt-1">
+                          Your video has been successfully uploaded.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -284,13 +362,18 @@ export default function CreatePage() {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={isUploading || !isAuthenticated}
+                    disabled={isUploading || !isAuthenticated || uploadSuccess}
                     className="bg-purple-500 hover:bg-purple-600 text-white"
                   >
                     {isUploading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         Uploading...
+                      </>
+                    ) : uploadSuccess ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Complete
                       </>
                     ) : (
                       <>
@@ -310,8 +393,12 @@ export default function CreatePage() {
               <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mb-4">
                 <ImageIcon className="w-8 h-8 text-purple-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Create Short</h3>
-              <p className="text-gray-400 text-sm mb-4">Create short-form content</p>
+              <h3 className="text-xl font-semibold text-white mb-2">
+                Create Short
+              </h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Create short-form content
+              </p>
               <Button className="bg-purple-500 hover:bg-purple-600 text-white">
                 <Upload className="w-4 h-4 mr-2" />
                 Create Short
@@ -339,8 +426,12 @@ export default function CreatePage() {
               <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mb-4">
                 <FileText className="w-8 h-8 text-purple-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Create Post</h3>
-              <p className="text-gray-400 text-sm mb-4">Share updates and thoughts</p>
+              <h3 className="text-xl font-semibold text-white mb-2">
+                Create Post
+              </h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Share updates and thoughts
+              </p>
               <Button className="bg-purple-500 hover:bg-purple-600 text-white">
                 <Link2 className="w-4 h-4 mr-2" />
                 Create Post
@@ -352,4 +443,3 @@ export default function CreatePage() {
     </div>
   );
 }
-

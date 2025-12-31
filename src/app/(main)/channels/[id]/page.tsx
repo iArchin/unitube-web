@@ -11,7 +11,6 @@ import {
   ChannelVideo,
 } from "../../../../../types/custom_types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import Loading from "@/app/loading";
 import Thumbnail from "@/components/Thumbnail";
 
 const ChannelId = () => {
@@ -71,12 +70,6 @@ const ChannelId = () => {
       </div>
 
       <div className="flex flex-wrap">
-        {loadingChannelDetails ||
-          (loadingChannelVideos &&
-            Array(10)
-              .fill(null)
-              .map((i, idx) => <Loading key={idx} />))}
-
         {channelVideos?.map((video) => (
           <Thumbnail
             key={video.id}

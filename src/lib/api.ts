@@ -480,13 +480,17 @@ export async function uploadVideo(
 
   try {
     const formData = new FormData();
-    formData.append("title", data.title);
-    formData.append("description", data.description);
-    formData.append("video_type", data.video_type);
     formData.append("file", data.file);
 
+    // Build query parameters for other fields
+    const queryParams = new URLSearchParams({
+      title: data.title,
+      description: data.description,
+      video_type: data.video_type,
+    });
+
     const res = await axios.post(
-      "https://api.unitribe.app/ut/api/videos",
+      `https://api.unitribe.app/ut/api/videos?${queryParams.toString()}`,
       formData,
       {
         headers: {
@@ -505,7 +509,7 @@ export async function uploadVideo(
       }
     );
 
-    return res.data;
+    return { data: res.data, status: res.status };
   } catch (error) {
     handleAPIError(error, "uploadVideo");
   }
