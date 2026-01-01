@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, Menu, Search, MessageCircle } from "lucide-react";
+import { Bell, Menu, Search } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useContext, useRef, useState } from "react";
 import { DialogTrigger } from "@radix-ui/react-dialog";
@@ -11,6 +11,8 @@ import {
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -88,14 +90,51 @@ const TopNavigation = () => {
         </div>
 
         <div className="flex items-center space-x-4">
-          <Bell
-            size={24}
-            className="cursor-pointer text-white hover:text-purple-400 transition-colors"
-          />
-          <MessageCircle
-            size={24}
-            className="cursor-pointer text-white hover:text-purple-400 transition-colors"
-          />
+          <DropdownMenu modal={false}>
+            <DropdownMenuTrigger className="focus:outline-none">
+              <Bell
+                size={24}
+                className="cursor-pointer text-white hover:text-purple-400 transition-colors"
+              />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80 bg-[#1a1a1a] border-[#333]">
+              <DropdownMenuLabel className="text-white font-semibold px-4 py-3 border-b border-[#333]">
+                Notifications
+              </DropdownMenuLabel>
+              <div className="max-h-96 overflow-y-auto">
+                <DropdownMenuItem className="focus:bg-[#2a2a2a] focus:text-white cursor-pointer px-4 py-3">
+                  <div className="flex flex-col space-y-1 w-full">
+                    <p className="text-sm text-white">New video uploaded</p>
+                    <p className="text-xs text-gray-400">2 hours ago</p>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="focus:bg-[#2a2a2a] focus:text-white cursor-pointer px-4 py-3">
+                  <div className="flex flex-col space-y-1 w-full">
+                    <p className="text-sm text-white">You have a new subscriber</p>
+                    <p className="text-xs text-gray-400">5 hours ago</p>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="focus:bg-[#2a2a2a] focus:text-white cursor-pointer px-4 py-3">
+                  <div className="flex flex-col space-y-1 w-full">
+                    <p className="text-sm text-white">Comment on your video</p>
+                    <p className="text-xs text-gray-400">1 day ago</p>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="focus:bg-[#2a2a2a] focus:text-white cursor-pointer px-4 py-3">
+                  <div className="flex flex-col space-y-1 w-full">
+                    <p className="text-sm text-white">Video liked by 50 users</p>
+                    <p className="text-xs text-gray-400">2 days ago</p>
+                  </div>
+                </DropdownMenuItem>
+              </div>
+              <DropdownMenuSeparator className="bg-[#333]" />
+              <DropdownMenuItem className="focus:bg-[#2a2a2a] focus:text-white cursor-pointer px-4 py-3 text-center justify-center">
+                <span className="text-sm text-purple-400 hover:text-purple-300">
+                  View all notifications
+                </span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <div className="md:hidden">
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger>
