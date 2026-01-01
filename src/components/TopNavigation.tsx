@@ -132,7 +132,7 @@ const TopNavigation = () => {
               </Button>
             )}
             {isAuthenticated && (
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger className="focus:outline-none">
                   <Avatar className="w-8 h-8 cursor-pointer border-2 border-purple-500">
                     <AvatarFallback className="bg-purple-500 text-white">
@@ -140,7 +140,7 @@ const TopNavigation = () => {
                     </AvatarFallback>
                   </Avatar>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-72 bg-[#1a1a1a] border-[#333]">
+                <DropdownMenuContent align="end" className="w-72 bg-[#1a1a1a] border-[#333]">
                   <DropdownMenuLabel className="text-white">
                     <div className="flex space-x-4">
                       <Avatar>
@@ -176,7 +176,7 @@ const TopNavigation = () => {
                 Sign In
               </Button>
             ) : (
-              <DropdownMenu>
+              <DropdownMenu modal={false}>
                 <DropdownMenuTrigger className="focus:outline-none">
                   <Avatar className="w-8 h-8 cursor-pointer border-2 border-purple-500">
                     <AvatarFallback className="bg-purple-500 text-white">
@@ -184,7 +184,7 @@ const TopNavigation = () => {
                     </AvatarFallback>
                   </Avatar>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-72 bg-[#1a1a1a] border-[#333]">
+                <DropdownMenuContent align="end" className="w-72 bg-[#1a1a1a] border-[#333]">
                   <DropdownMenuLabel className="text-white">
                     <div className="flex space-x-4">
                       <Avatar>
