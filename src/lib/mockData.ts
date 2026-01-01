@@ -114,6 +114,28 @@ export function generateMockVideos(count: number, category: string): Video[] {
         "Current Affairs",
       ],
     },
+    shorts: {
+      titles: [
+        "Quick Cooking Tip",
+        "Funny Moment",
+        "Dance Challenge",
+        "Life Hack",
+        "Pet Compilation",
+        "Travel Short",
+        "Comedy Skit",
+        "Quick Tutorial",
+      ],
+      channels: [
+        "Quick Tips",
+        "Funny Moments",
+        "Dance Crew",
+        "Life Hacks",
+        "Pet Lovers",
+        "Travel Shorts",
+        "Comedy Central",
+        "Quick Learn",
+      ],
+    },
   };
 
   const categoryData = categories[category as keyof typeof categories] || categories.trending;
@@ -125,11 +147,15 @@ export function generateMockVideos(count: number, category: string): Video[] {
       ? `${categoryData.titles[titleIndex]} ${videoNumber}`
       : categoryData.titles[titleIndex];
     
+    // Use vertical aspect ratio for shorts (9:16), horizontal for others (16:9)
+    const thumbnailWidth = category === "shorts" ? 180 : 320;
+    const thumbnailHeight = category === "shorts" ? 320 : 180;
+    
     videos.push({
       id: `${category}-video-${i + 1}`,
       title: title,
       description: `This is a placeholder video description for ${title}. Lorem ipsum dolor sit amet, consectetur adipiscing elit.`,
-      thumbnail: `https://picsum.photos/seed/${category}-${i}/320/180`,
+      thumbnail: `https://picsum.photos/seed/${category}-${i}/${thumbnailWidth}/${thumbnailHeight}`,
       viewCount: Math.floor(Math.random() * 10000000).toString(),
       channel: {
         channelId: `${category}-channel-${i + 1}`,

@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import TopNavigation from "@/components/TopNavigation";
 import Sidebar from "@/components/Sidebar";
 import FooterMenu from "@/components/FooterMenu";
+import Footer from "@/components/Footer";
 import ContextProvider from "@/components/ContextProvider";
 import ReduxProvider from "@/components/ReduxProvider";
 
@@ -37,6 +38,7 @@ export default function RootLayout({
               <TopNavigation />
               <Sidebar />
               <FooterMenu />
+              <Footer />
             </ContextProvider>
           </ThemeProvider>
         </ReduxProvider>

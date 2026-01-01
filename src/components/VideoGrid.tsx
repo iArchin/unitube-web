@@ -13,20 +13,45 @@ const VideoGrid = ({
   categories = ["trending", "sports", "music", "gaming", "news"],
 }: VideoGridProps) => {
   const router = useRouter();
-  
+
   const handleViewAll = (category: string) => {
     router.push(`/top?category=${category}`);
   };
 
+  // Generate shorts videos
+  const shortsVideos = useMemo(() => generateMockVideos(12, "shorts"), []);
+
+  const handleShortsViewAll = () => {
+    router.push(`/top?category=shorts`);
+  };
+
   return (
-    <div className="py-4 px-2 md:px-0">
+    <div className="py-4 px-4 md:px-8">
       {categories.length === 0 ? (
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">No categories available</p>
         </div>
       ) : (
         <>
-          {categories.map((category) => (
+          {/* First category row */}
+          {categories.length > 0 && (
+            <CategoryRow
+              key={categories[0]}
+              category={categories[0]}
+              onViewAll={handleViewAll}
+            />
+          )}
+
+          {/* Shorts Section - Second Row */}
+          <VideoRow
+            title="Shorts"
+            videos={shortsVideos}
+            onViewAll={handleShortsViewAll}
+            vertical={true}
+          />
+
+          {/* Remaining category rows */}
+          {categories.slice(1).map((category) => (
             <CategoryRow
               key={category}
               category={category}

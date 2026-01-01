@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Upload,
   Video,
@@ -21,7 +21,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { uploadVideo, UploadVideoData } from "@/lib/api";
+import {
+  uploadVideo,
+  UploadVideoData,
+  fetchAllCategories,
+  Category,
+} from "@/lib/api";
 import { useAppSelector } from "@/store/hooks";
 import { useRouter } from "next/navigation";
 
@@ -31,26 +36,50 @@ export default function CreatePage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
   const [formData, setFormData] = useState<{
     title: string;
     description: string;
-    video_type: string;
+    category: string;
     file: File | null;
   }>({
     title: "",
     description: "",
-    video_type: "long", // default value
+    category: "",
     file: null,
   });
 
   const { token, isAuthenticated } = useAppSelector((state) => state.auth);
   const router = useRouter();
 
+  // Fetch categories when dialog opens and user is authenticated
+  useEffect(() => {
+    if (isUploadDialogOpen && isAuthenticated && token) {
+      fetchCategories();
+    }
+  }, [isUploadDialogOpen, isAuthenticated, token]);
+
+  const fetchCategories = async () => {
+    if (!token) return;
+
+    setLoadingCategories(true);
+    try {
+      const fetchedCategories = await fetchAllCategories(token);
+      setCategories(fetchedCategories);
+    } catch (error: any) {
+      console.error("Failed to fetch categories:", error);
+      setUploadError("Failed to load categories. Please try again.");
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       title: "",
       description: "",
-      video_type: "long",
+      category: "",
       file: null,
     });
     setUploadError(null);
@@ -115,13 +144,19 @@ export default function CreatePage() {
       return;
     }
 
+    if (!formData.category) {
+      setUploadError("Please select a category");
+      return;
+    }
+
     setIsUploading(true);
 
     try {
       const uploadData: UploadVideoData = {
         title: formData.title,
         description: formData.description,
-        video_type: formData.video_type,
+        video_type: "long", // Always set to "long" as per requirements
+        category_id: formData.category,
         file: formData.file,
       };
 
@@ -237,22 +272,30 @@ export default function CreatePage() {
 
                 <div className="space-y-2">
                   <label
-                    htmlFor="video_type"
+                    htmlFor="category"
                     className="text-sm font-medium text-white"
                   >
-                    Video Type *
+                    Category *
                   </label>
                   <select
-                    id="video_type"
-                    name="video_type"
-                    value={formData.video_type}
+                    id="category"
+                    name="category"
+                    value={formData.category}
                     onChange={handleInputChange}
                     required
+                    disabled={loadingCategories}
                     className="flex w-full rounded-md border border-[#444] bg-[#2a2a2a] px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <option value="long">Long</option>
-                    <option value="short">Short</option>
-                    <option value="story">Story</option>
+                    <option value="">
+                      {loadingCategories
+                        ? "Loading categories..."
+                        : "Select a category"}
+                    </option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name || category.title || category.id}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

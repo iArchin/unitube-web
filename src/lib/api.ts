@@ -446,10 +446,50 @@ export async function fetchVideosByCategory(
   return fetchVideos(searchQuery, maxResult);
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  [key: string]: any;
+}
+
+export async function fetchAllCategories(
+  token: string
+): Promise<Category[]> {
+  if (!token?.trim()) {
+    throw new ValidationError("Authentication token is required");
+  }
+
+  try {
+    const { data } = await axios.get(
+      "https://api.unitribe.app/ut/api/all-category",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000,
+      }
+    );
+
+    // Handle different possible response structures
+    if (Array.isArray(data)) {
+      return data;
+    } else if (data.data && Array.isArray(data.data)) {
+      return data.data;
+    } else if (data.categories && Array.isArray(data.categories)) {
+      return data.categories;
+    }
+
+    throw new ValidationError("Invalid category response structure");
+  } catch (error) {
+    handleAPIError(error, "fetchAllCategories");
+  }
+}
+
 export interface UploadVideoData {
   title: string;
   description: string;
   video_type: string;
+  category_id: string;
   file: File;
 }
 
@@ -470,6 +510,10 @@ export async function uploadVideo(
     throw new ValidationError("Video type cannot be empty");
   }
 
+  if (!data.category_id?.trim()) {
+    throw new ValidationError("Category ID cannot be empty");
+  }
+
   if (!data.file) {
     throw new ValidationError("Video file is required");
   }
@@ -487,6 +531,7 @@ export async function uploadVideo(
       title: data.title,
       description: data.description,
       video_type: data.video_type,
+      category_id: data.category_id,
     });
 
     const res = await axios.post(

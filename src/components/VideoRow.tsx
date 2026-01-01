@@ -4,15 +4,17 @@ import { useState, useRef, useEffect } from "react";
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import HorizontalThumbnail from "./HorizontalThumbnail";
+import VerticalThumbnail from "./VerticalThumbnail";
 import { Video } from "../../types/custom_types";
 
 interface VideoRowProps {
   title: string;
   videos: Video[];
   onViewAll?: () => void;
+  vertical?: boolean;
 }
 
-const VideoRow = ({ title, videos, onViewAll }: VideoRowProps) => {
+const VideoRow = ({ title, videos, onViewAll, vertical = false }: VideoRowProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftChevron, setShowLeftChevron] = useState(false);
   const [showRightChevron, setShowRightChevron] = useState(true);
@@ -221,7 +223,8 @@ const VideoRow = ({ title, videos, onViewAll }: VideoRowProps) => {
 
   const scroll = (direction: "left" | "right") => {
     if (scrollContainerRef.current) {
-      const scrollAmount = 320; // Approximate width of one video card + gap
+      // Adjust scroll amount based on thumbnail type
+      const scrollAmount = vertical ? 200 : 320; // Vertical thumbnails are narrower
       const newScrollLeft =
         scrollContainerRef.current.scrollLeft +
         (direction === "right" ? scrollAmount : -scrollAmount);
@@ -259,7 +262,11 @@ const VideoRow = ({ title, videos, onViewAll }: VideoRowProps) => {
         >
           <div className="flex gap-4">
             {videos.map((video) => (
-              <HorizontalThumbnail key={video.id} video={video} />
+              vertical ? (
+                <VerticalThumbnail key={video.id} video={video} />
+              ) : (
+                <HorizontalThumbnail key={video.id} video={video} />
+              )
             ))}
           </div>
         </div>

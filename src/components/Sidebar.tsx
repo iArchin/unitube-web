@@ -1,7 +1,15 @@
 "use client";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
-import { Home, Plus, CreditCard, Star, Settings } from "lucide-react";
+import {
+  Home,
+  Plus,
+  CreditCard,
+  Star,
+  Settings,
+  SquarePlus,
+  Crown,
+} from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
@@ -81,8 +89,8 @@ const Sidebar = ({ className }: Props) => {
             )}
           >
             <div className="relative">
-              <div className="absolute inset-0 border-2 border-current rounded-sm opacity-50"></div>
-              <Plus size={20} className="relative" />
+              {/* <div className="absolute inset-0 border-2 border-current rounded-sm opacity-50"></div> */}
+              <SquarePlus size={24} className="relative" />
             </div>
           </Button>
         </Link>
@@ -97,7 +105,7 @@ const Sidebar = ({ className }: Props) => {
                 : "text-gray-400  hover:text-white"
             )}
           >
-            <CreditCard size={24} />
+            <Crown size={24} />
           </Button>
         </Link>
         <Link href="/favorites">

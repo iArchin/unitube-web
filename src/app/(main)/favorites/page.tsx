@@ -6,7 +6,7 @@ import Thumbnail from "@/components/Thumbnail";
 import { generateMockVideos } from "@/lib/mockData";
 
 export default function FavoritesPage() {
-  // Generate favorited videos (mix of categories)
+  // Generate favorite videos (mix of categories)
   const favoriteVideos = useMemo(() => {
     const videos = [
       ...generateMockVideos(8, "trending"),
