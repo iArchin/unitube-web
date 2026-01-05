@@ -31,6 +31,7 @@ import { useAppSelector } from "@/store/hooks";
 import { useRouter } from "next/navigation";
 
 export default function CreatePage() {
+  // Video upload state
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -39,6 +40,26 @@ export default function CreatePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [formData, setFormData] = useState<{
+    title: string;
+    description: string;
+    category: string;
+    file: File | null;
+  }>({
+    title: "",
+    description: "",
+    category: "",
+    file: null,
+  });
+
+  // Short upload state
+  const [isShortDialogOpen, setIsShortDialogOpen] = useState(false);
+  const [isUploadingShort, setIsUploadingShort] = useState(false);
+  const [shortUploadProgress, setShortUploadProgress] = useState(0);
+  const [shortUploadError, setShortUploadError] = useState<string | null>(null);
+  const [shortUploadSuccess, setShortUploadSuccess] = useState(false);
+  const [shortCategories, setShortCategories] = useState<Category[]>([]);
+  const [loadingShortCategories, setLoadingShortCategories] = useState(false);
+  const [shortFormData, setShortFormData] = useState<{
     title: string;
     description: string;
     category: string;
@@ -60,6 +81,13 @@ export default function CreatePage() {
     }
   }, [isUploadDialogOpen, isAuthenticated, token]);
 
+  // Fetch categories for short upload when dialog opens
+  useEffect(() => {
+    if (isShortDialogOpen && isAuthenticated && token) {
+      fetchShortCategories();
+    }
+  }, [isShortDialogOpen, isAuthenticated, token]);
+
   const fetchCategories = async () => {
     if (!token) return;
 
@@ -72,6 +100,21 @@ export default function CreatePage() {
       setUploadError("Failed to load categories. Please try again.");
     } finally {
       setLoadingCategories(false);
+    }
+  };
+
+  const fetchShortCategories = async () => {
+    if (!token) return;
+
+    setLoadingShortCategories(true);
+    try {
+      const fetchedCategories = await fetchAllCategories(token);
+      setShortCategories(fetchedCategories);
+    } catch (error: any) {
+      console.error("Failed to fetch categories:", error);
+      setShortUploadError("Failed to load categories. Please try again.");
+    } finally {
+      setLoadingShortCategories(false);
     }
   };
 
@@ -92,11 +135,36 @@ export default function CreatePage() {
     }
   };
 
+  const resetShortForm = () => {
+    setShortFormData({
+      title: "",
+      description: "",
+      category: "",
+      file: null,
+    });
+    setShortUploadError(null);
+    setShortUploadProgress(0);
+    setShortUploadSuccess(false);
+    // Reset file input
+    const shortFileInput = document.getElementById("short-file") as HTMLInputElement;
+    if (shortFileInput) {
+      shortFileInput.value = "";
+    }
+  };
+
   const handleDialogChange = (open: boolean) => {
     setIsUploadDialogOpen(open);
     if (!open) {
       // Reset form when dialog closes
       resetForm();
+    }
+  };
+
+  const handleShortDialogChange = (open: boolean) => {
+    setIsShortDialogOpen(open);
+    if (!open) {
+      // Reset form when dialog closes
+      resetShortForm();
     }
   };
 
@@ -118,6 +186,24 @@ export default function CreatePage() {
     }
   };
 
+  const handleShortFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("video/")) {
+        setShortUploadError("Please select a valid video file");
+        return;
+      }
+      // Validate file size (e.g., max 500MB)
+      if (file.size > 500 * 1024 * 1024) {
+        setShortUploadError("File size must be less than 500MB");
+        return;
+      }
+      setShortFormData({ ...shortFormData, file });
+      setShortUploadError(null);
+    }
+  };
+
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -126,6 +212,16 @@ export default function CreatePage() {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
     setUploadError(null);
+  };
+
+  const handleShortInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    const { name, value } = e.target;
+    setShortFormData({ ...shortFormData, [name]: value });
+    setShortUploadError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -189,6 +285,70 @@ export default function CreatePage() {
       );
       setIsUploading(false);
       setUploadProgress(0);
+    }
+  };
+
+  const handleShortSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setShortUploadError(null);
+    setShortUploadProgress(0);
+    setShortUploadSuccess(false);
+
+    if (!isAuthenticated || !token) {
+      setShortUploadError("Please log in to upload shorts");
+      return;
+    }
+
+    if (!shortFormData.file) {
+      setShortUploadError("Please select a video file");
+      return;
+    }
+
+    if (!shortFormData.category) {
+      setShortUploadError("Please select a category");
+      return;
+    }
+
+    setIsUploadingShort(true);
+
+    try {
+      const uploadData: UploadVideoData = {
+        title: shortFormData.title,
+        description: shortFormData.description,
+        video_type: "short", // Set to "short" for shorts
+        category_id: shortFormData.category,
+        file: shortFormData.file,
+      };
+
+      const response = await uploadVideo(uploadData, token, (progress) => {
+        setShortUploadProgress(progress);
+      });
+
+      // Check if status is 201
+      if (response.status === 201) {
+        setShortUploadSuccess(true);
+        setIsUploadingShort(false);
+
+        // Wait a bit to show success message, then reset and close
+        setTimeout(() => {
+          resetShortForm();
+          setIsShortDialogOpen(false);
+          router.refresh();
+        }, 2000);
+      } else {
+        // Reset form and close dialog for other success statuses
+        resetShortForm();
+        setIsShortDialogOpen(false);
+        router.refresh();
+      }
+
+      console.log("Short uploaded successfully:", response);
+    } catch (error: any) {
+      setShortUploadError(
+        error.message || "Failed to upload short. Please try again."
+      );
+      setIsUploadingShort(false);
+      setShortUploadProgress(0);
     }
   };
 
@@ -431,23 +591,231 @@ export default function CreatePage() {
           </Dialog>
 
           {/* Create Short Card */}
-          <div className="bg-[#1a1a1a] rounded-xl p-8 border border-[#333] hover:border-purple-500 transition-colors cursor-pointer">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mb-4">
-                <ImageIcon className="w-8 h-8 text-purple-400" />
+          <Dialog open={isShortDialogOpen} onOpenChange={handleShortDialogChange}>
+            <DialogTrigger asChild>
+              <div className="bg-[#1a1a1a] rounded-xl p-8 border border-[#333] hover:border-purple-500 transition-colors cursor-pointer">
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-16 h-16 bg-purple-500/20 rounded-full flex items-center justify-center mb-4">
+                    <ImageIcon className="w-8 h-8 text-purple-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-white mb-2">
+                    Create Short
+                  </h3>
+                  <p className="text-gray-400 text-sm mb-4">
+                    Create short-form content
+                  </p>
+                  <Button className="bg-purple-500 hover:bg-purple-600 text-white">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Create Short
+                  </Button>
+                </div>
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">
-                Create Short
-              </h3>
-              <p className="text-gray-400 text-sm mb-4">
-                Create short-form content
-              </p>
-              <Button className="bg-purple-500 hover:bg-purple-600 text-white">
-                <Upload className="w-4 h-4 mr-2" />
-                Create Short
-              </Button>
-            </div>
-          </div>
+            </DialogTrigger>
+            <DialogContent className="bg-[#1a1a1a] border-[#333] text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="text-2xl">Upload Short</DialogTitle>
+                <DialogDescription className="text-gray-400">
+                  Fill in the details below to upload your short
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleShortSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="short-title"
+                    className="text-sm font-medium text-white"
+                  >
+                    Title *
+                  </label>
+                  <Input
+                    id="short-title"
+                    name="title"
+                    type="text"
+                    value={shortFormData.title}
+                    onChange={handleShortInputChange}
+                    placeholder="Enter short title"
+                    required
+                    className="bg-[#2a2a2a] border-[#444] text-white placeholder:text-gray-500"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor="short-description"
+                    className="text-sm font-medium text-white"
+                  >
+                    Description *
+                  </label>
+                  <textarea
+                    id="short-description"
+                    name="description"
+                    value={shortFormData.description}
+                    onChange={handleShortInputChange}
+                    placeholder="Enter short description"
+                    required
+                    rows={4}
+                    className="flex w-full rounded-md border border-[#444] bg-[#2a2a2a] px-3 py-2 text-sm text-white placeholder:text-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor="short-category"
+                    className="text-sm font-medium text-white"
+                  >
+                    Category *
+                  </label>
+                  <select
+                    id="short-category"
+                    name="category"
+                    value={shortFormData.category}
+                    onChange={handleShortInputChange}
+                    required
+                    disabled={loadingShortCategories}
+                    className="flex w-full rounded-md border border-[#444] bg-[#2a2a2a] px-3 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <option value="">
+                      {loadingShortCategories
+                        ? "Loading categories..."
+                        : "Select a category"}
+                    </option>
+                    {shortCategories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name || category.title || category.id}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor="short-file"
+                    className="text-sm font-medium text-white"
+                  >
+                    Video File *
+                  </label>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center w-full">
+                      <label
+                        htmlFor="short-file"
+                        className="flex flex-col items-center justify-center w-full h-32 border-2 border-[#444] border-dashed rounded-lg cursor-pointer bg-[#2a2a2a] hover:bg-[#333] transition-colors"
+                      >
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <Upload className="w-8 h-8 mb-2 text-gray-400" />
+                          <p className="mb-2 text-sm text-gray-400">
+                            <span className="font-semibold">
+                              Click to upload
+                            </span>{" "}
+                            or drag and drop
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            MP4, AVI, MOV, etc. (MAX. 500MB)
+                          </p>
+                        </div>
+                        <input
+                          id="short-file"
+                          name="file"
+                          type="file"
+                          accept="video/*"
+                          onChange={handleShortFileChange}
+                          required
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                    {shortFormData.file && (
+                      <div className="p-3 rounded-md bg-[#2a2a2a] border border-[#444]">
+                        <p className="text-sm text-white font-medium">
+                          {shortFormData.file.name}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {(shortFormData.file.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {isUploadingShort && !shortUploadSuccess && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-white font-medium">
+                        Uploading...
+                      </span>
+                      <span className="text-gray-400">{shortUploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-[#2a2a2a] rounded-full h-2.5 border border-[#444]">
+                      <div
+                        className="bg-purple-500 h-2.5 rounded-full transition-all duration-300"
+                        style={{ width: `${shortUploadProgress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
+
+                {shortUploadSuccess && (
+                  <div className="p-4 rounded-md bg-green-500/20 border border-green-500/50">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-green-400 flex-shrink-0" />
+                      <div>
+                        <p className="text-green-400 font-medium text-sm">
+                          Upload Complete!
+                        </p>
+                        <p className="text-green-300/80 text-xs mt-1">
+                          Your short has been successfully uploaded.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {shortUploadError && (
+                  <div className="p-3 rounded-md bg-red-500/20 border border-red-500/50 text-red-400 text-sm">
+                    {shortUploadError}
+                  </div>
+                )}
+
+                {!isAuthenticated && (
+                  <div className="p-3 rounded-md bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 text-sm">
+                    Please log in to upload shorts
+                  </div>
+                )}
+
+                <DialogFooter>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleShortDialogChange(false)}
+                    disabled={isUploadingShort}
+                    className="border-[#444] text-white hover:bg-[#2a2a2a]"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isUploadingShort || !isAuthenticated || shortUploadSuccess}
+                    className="bg-purple-500 hover:bg-purple-600 text-white"
+                  >
+                    {isUploadingShort ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Uploading...
+                      </>
+                    ) : shortUploadSuccess ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 mr-2" />
+                        Complete
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Short
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
 
           {/* Go Live Card */}
           <div className="bg-[#1a1a1a] rounded-xl p-8 border border-[#333] hover:border-purple-500 transition-colors cursor-pointer">

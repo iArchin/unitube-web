@@ -4,22 +4,21 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useSelector } from "react-redux";
 import VideoRow from "./VideoRow";
-import { fetchCategoriesWithVideos, CategoryWithVideos } from "@/lib/api";
+import {
+  fetchCategoriesWithVideos,
+  CategoryWithVideos,
+  fetchShortVideos,
+} from "@/lib/api";
 import { Video } from "../../types/custom_types";
 import { RootState } from "@/store/store";
 
-interface VideoGridProps {
-  categories?: string[];
-}
-
-const VideoGrid = ({
-  categories = ["trending", "sports", "music", "gaming", "news"],
-}: VideoGridProps) => {
+const VideoGrid = () => {
   const router = useRouter();
   const token = useSelector((state: RootState) => state.auth.token);
   const [categoriesData, setCategoriesData] = useState<CategoryWithVideos[]>(
     []
   );
+  const [shortsVideos, setShortsVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,8 +33,25 @@ const VideoGrid = ({
       try {
         setLoading(true);
         setError(null);
-        const data = await fetchCategoriesWithVideos(token, 1, 10);
-        setCategoriesData(data);
+
+        // Fetch categories and shorts in parallel
+        const [categoriesData, shortsData] = await Promise.all([
+          fetchCategoriesWithVideos(token, 1, 10),
+          fetchShortVideos(token, 1, 10),
+        ]);
+
+        setCategoriesData(categoriesData);
+        // Filter out null videos and videos with missing critical properties
+        setShortsVideos(
+          shortsData.filter(
+            (video) =>
+              video !== null &&
+              video !== undefined &&
+              video.id &&
+              video.title &&
+              video.thumbnail
+          )
+        );
       } catch (err) {
         console.error("Failed to fetch categories with videos:", err);
         setError(err instanceof Error ? err.message : "Failed to load videos");
@@ -50,14 +66,6 @@ const VideoGrid = ({
   const handleViewAll = (category: string) => {
     router.push(`/top?category=${category}`);
   };
-
-  // Find shorts category or use first category's videos as shorts
-  const shortsCategory = categoriesData.find(
-    (cat) =>
-      cat.slug.toLowerCase() === "shorts" ||
-      cat.title.toLowerCase() === "shorts"
-  );
-  const shortsVideos: Video[] = shortsCategory?.videos || [];
 
   const handleShortsViewAll = () => {
     router.push(`/top?category=shorts`);
@@ -100,6 +108,16 @@ const VideoGrid = ({
       cat.title.toLowerCase() !== "shorts"
   );
 
+  // Filter out null videos and videos with missing critical properties from shorts
+  const validShortsVideos = shortsVideos.filter(
+    (video) =>
+      video !== null &&
+      video !== undefined &&
+      video.id &&
+      video.title &&
+      video.thumbnail
+  );
+
   return (
     <div className="py-4 px-4 md:px-8">
       {mainCategories.length > 0 && (
@@ -112,10 +130,10 @@ const VideoGrid = ({
           />
 
           {/* Shorts Section - Second Row (if available) */}
-          {shortsVideos.length > 0 && (
+          {validShortsVideos.length > 0 && (
             <VideoRow
               title="Shorts"
-              videos={shortsVideos}
+              videos={validShortsVideos}
               onViewAll={handleShortsViewAll}
               vertical={true}
             />

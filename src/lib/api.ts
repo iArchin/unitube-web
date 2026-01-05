@@ -682,6 +682,226 @@ export async function fetchCategoriesWithVideos(
   }
 }
 
+export interface ShortVideoResponse {
+  current_page: number;
+  data: Array<{
+    id: number;
+    video_type: string;
+    category_id: number;
+    poster: string | null;
+    title: string;
+    description: string;
+    user_id: number;
+    video_link: string;
+    download_link: string | null;
+  }>;
+  first_page_url: string;
+  from: number;
+  last_page: number;
+  last_page_url: string;
+  links: Array<{
+    url: string | null;
+    label: string;
+    page: number | null;
+    active: boolean;
+  }>;
+  next_page_url: string | null;
+  path: string;
+  per_page: number;
+  prev_page_url: string | null;
+  to: number;
+  total: number;
+}
+
+export async function fetchShortVideos(
+  token: string,
+  page: number = 1,
+  size: number = 10
+): Promise<Video[]> {
+  if (!token?.trim()) {
+    throw new ValidationError("Authentication token is required");
+  }
+
+  try {
+    const { data } = await axios.get<ShortVideoResponse>(
+      `https://api.unitribe.app/ut/api/videos/short`,
+      {
+        params: {
+          page,
+          size,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000,
+      }
+    );
+
+    if (!data || !data.data || !Array.isArray(data.data)) {
+      throw new ValidationError("Invalid response structure from videos/short API");
+    }
+
+    // Helper function to generate random view count
+    const getRandomViewCount = (): string => {
+      const views = Math.floor(Math.random() * 10000000) + 100; // Random between 100 and 10,000,100
+      return views.toString();
+    };
+
+    // Helper function to generate random date (within last 2 years)
+    const getRandomDate = (): string => {
+      const now = new Date();
+      const twoYearsAgo = new Date(now.getTime() - 2 * 365 * 24 * 60 * 60 * 1000);
+      const randomTime = twoYearsAgo.getTime() + Math.random() * (now.getTime() - twoYearsAgo.getTime());
+      return new Date(randomTime).toISOString();
+    };
+
+    // Transform API response to Video format and filter out null videos and videos with missing critical data
+    return data.data
+      .filter(
+        (video) =>
+          video !== null &&
+          video !== undefined &&
+          video.id &&
+          video.title &&
+          (video.poster || video.title) // At least have a title to create placeholder
+      )
+      .map((video) => {
+        // Use poster image for thumbnail, fallback to vertical placeholder for shorts (180x320 aspect ratio)
+        const thumbnail = video.poster || 
+          `https://via.placeholder.com/180x320/6366f1/ffffff?text=${encodeURIComponent((video.title || "Short").substring(0, 20))}`;
+
+        return {
+          id: video.id.toString(),
+          title: video.title || "Untitled Short",
+          description: video.description || "",
+          thumbnail,
+          viewCount: getRandomViewCount(),
+          channel: {
+            channelId: video.user_id.toString(),
+            channelTitle: "User Channel", // API doesn't provide channel name
+            channelImage: `https://via.placeholder.com/40x40/6366f1/ffffff?text=U${video.user_id}`, // Placeholder
+          },
+          publishedDate: getRandomDate(),
+          download_link: video.download_link || null,
+        } as Video;
+      })
+      .filter(
+        (video) =>
+          video !== null &&
+          video !== undefined &&
+          video.id &&
+          video.title &&
+          video.thumbnail
+      );
+  } catch (error) {
+    handleAPIError(error, "fetchShortVideos");
+  }
+}
+
+export interface CategoryVideosResponse {
+  data: Array<{
+    id: number;
+    video_type: string;
+    category_id: number;
+    poster: string | null;
+    title: string;
+    description: string;
+    user_id: number;
+    video_link: string;
+    download_link: string | null;
+    category: {
+      id: number;
+      title: string;
+      description?: string;
+      slug?: string;
+    };
+  }>;
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
+export async function fetchVideosByCategoryId(
+  categoryId: number,
+  token: string,
+  page: number = 1,
+  size: number = 10
+): Promise<Video[]> {
+  if (!token?.trim()) {
+    throw new ValidationError("Authentication token is required");
+  }
+
+  if (!categoryId || categoryId <= 0) {
+    throw new ValidationError("Valid category ID is required");
+  }
+
+  try {
+    const { data } = await axios.get<CategoryVideosResponse>(
+      `https://api.unitribe.app/ut/api/categories/${categoryId}/videos`,
+      {
+        params: {
+          page,
+          size,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000,
+      }
+    );
+
+    if (!data || !data.data || !Array.isArray(data.data)) {
+      throw new ValidationError("Invalid response structure from categories/{id}/videos API");
+    }
+
+    // Helper function to generate random view count
+    const getRandomViewCount = (): string => {
+      const views = Math.floor(Math.random() * 10000000) + 100; // Random between 100 and 10,000,100
+      return views.toString();
+    };
+
+    // Helper function to generate random date (within last 2 years)
+    const getRandomDate = (): string => {
+      const now = new Date();
+      const twoYearsAgo = new Date(now.getTime() - 2 * 365 * 24 * 60 * 60 * 1000);
+      const randomTime = twoYearsAgo.getTime() + Math.random() * (now.getTime() - twoYearsAgo.getTime());
+      return new Date(randomTime).toISOString();
+    };
+
+    // Transform API response to Video format and filter out null videos
+    return data.data
+      .filter((video) => video !== null && video !== undefined)
+      .map((video) => {
+        // Use poster image for thumbnail, fallback to placeholder if not available
+        // Use vertical placeholder for shorts, horizontal for long videos
+        const isShort = video.video_type === "short";
+        const placeholderDimensions = isShort ? "180x320" : "320x180";
+        const thumbnail = video.poster || 
+          `https://via.placeholder.com/${placeholderDimensions}/6366f1/ffffff?text=${encodeURIComponent((video.title || (isShort ? "Short" : "Video")).substring(0, 20))}`;
+
+        return {
+          id: video.id.toString(),
+          title: video.title || "Untitled Video",
+          description: video.description || "",
+          thumbnail,
+          viewCount: getRandomViewCount(),
+          channel: {
+            channelId: video.user_id.toString(),
+            channelTitle: "User Channel", // API doesn't provide channel name
+            channelImage: `https://via.placeholder.com/40x40/6366f1/ffffff?text=U${video.user_id}`, // Placeholder
+          },
+          publishedDate: getRandomDate(),
+          download_link: video.download_link || null,
+        } as Video;
+      });
+  } catch (error) {
+    handleAPIError(error, "fetchVideosByCategoryId");
+  }
+}
+
 export interface UploadVideoData {
   title: string;
   description: string;
