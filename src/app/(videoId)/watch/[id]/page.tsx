@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { useSelector } from "react-redux";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatCount, formatPublishedDate } from "@/lib/utils";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
@@ -10,9 +11,12 @@ import RelatedVideos from "@/components/RelatedVideos";
 import { generateMockVideos } from "@/lib/mockData";
 import { Video } from "../../../../../types/custom_types";
 import { Button } from "@/components/ui/button";
+import { fetchVideoById } from "@/lib/api";
+import { RootState } from "@/store/store";
 
 // Dynamically import react-player to avoid SSR issues
-const ReactPlayer = dynamic(() => import("react-player/youtube"), {
+// Use react-player (not youtube-specific) to support file URLs
+const ReactPlayer = dynamic(() => import("react-player"), {
   ssr: false,
 });
 
@@ -92,22 +96,53 @@ const defaultComments = [
 
 const VideoDetails = () => {
   const { id } = useParams();
+  const token = useSelector((state: RootState) => state.auth.token);
   const [isMounted, setIsMounted] = useState(false);
   const [substringCount, setSubstringCount] = useState<undefined | number>(200);
   const [newComment, setNewComment] = useState("");
+  const [videoDetails, setVideoDetails] = useState<Video | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Use default video data instead of API
-  const videoDetails = getDefaultVideo(id);
+  useEffect(() => {
+    const loadVideo = async () => {
+      if (!id || !token) {
+        // Fallback to default video if no token
+        setVideoDetails(getDefaultVideo(id));
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const video = await fetchVideoById(id as string, token);
+        setVideoDetails(video);
+      } catch (err) {
+        console.error("Failed to fetch video:", err);
+        setError(err instanceof Error ? err.message : "Failed to load video");
+        // Fallback to default video on error
+        setVideoDetails(getDefaultVideo(id));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadVideo();
+  }, [id, token]);
+
+  // Use default video data if not loaded yet
+  const currentVideo = videoDetails || getDefaultVideo(id);
 
   // Generate related videos using mock data
   const relatedVideos = generateMockVideos(8, "trending");
 
-  // Default YouTube video ID for the player
-  const defaultVideoId = "dQw4w9WgXcQ";
+  // Determine video URL - use download_link if available, otherwise fallback to YouTube
+  const videoUrl = currentVideo.download_link || `https://www.youtube.com/watch?v=dQw4w9WgXcQ`;
 
   return (
     <div className="min-h-screen bg-[#111111] pt-16 md:pt-20">
@@ -118,42 +153,57 @@ const VideoDetails = () => {
             {/* Video Player */}
             <div className="w-full mb-4">
               <div className="relative aspect-video rounded-xl overflow-hidden bg-black">
-                {isMounted && (
+                {loading ? (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <p className="text-white">Loading video...</p>
+                  </div>
+                ) : error && !currentVideo.download_link ? (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <p className="text-red-500">Error: {error}</p>
+                  </div>
+                ) : isMounted ? (
                   <ReactPlayer
-                    url={`https://www.youtube.com/watch?v=${defaultVideoId}`}
+                    url={videoUrl}
                     width="100%"
                     height="100%"
                     playing={false}
                     controls={true}
                     config={{
-                      playerVars: {
-                        modestbranding: 1,
-                        rel: 0,
+                      file: {
+                        attributes: {
+                          controlsList: "nodownload",
+                        },
+                      },
+                      youtube: {
+                        playerVars: {
+                          modestbranding: 1,
+                          rel: 0,
+                        },
                       },
                     }}
                   />
-                )}
+                ) : null}
               </div>
             </div>
 
             {/* Video Info */}
             <div className="mb-4">
               <h3 className="text-xl md:text-2xl font-semibold text-white mb-3">
-                {videoDetails.title}
+                {currentVideo.title}
               </h3>
 
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
                 <div className="flex items-center space-x-3">
                   <Avatar>
                     <AvatarImage
-                      src={videoDetails.channel.channelImage}
-                      alt={videoDetails.channel.channelTitle}
+                      src={currentVideo.channel.channelImage}
+                      alt={currentVideo.channel.channelTitle}
                     />
                     <AvatarFallback>VD</AvatarFallback>
                   </Avatar>
                   <div>
                     <h4 className="text-white text-sm font-medium">
-                      {videoDetails.channel.channelTitle}
+                      {currentVideo.channel.channelTitle}
                     </h4>
                     <p className="text-gray-400 text-xs">
                       {formatCount(Math.floor(Math.random() * 1000000))}{" "}
@@ -181,19 +231,19 @@ const VideoDetails = () => {
             <div className="p-4 bg-[#1a1a1a] text-white rounded-lg mb-6">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-300">
-                  {formatCount(+videoDetails.viewCount)} views •{" "}
-                  {formatPublishedDate(videoDetails.publishedDate)}
+                  {formatCount(+currentVideo.viewCount)} views •{" "}
+                  {formatPublishedDate(currentVideo.publishedDate)}
                 </span>
               </div>
               <p className="leading-6 text-sm text-gray-300">
-                {videoDetails.description.substring(
+                {currentVideo.description.substring(
                   0,
-                  substringCount || videoDetails.description.length
+                  substringCount || currentVideo.description.length
                 )}
                 {substringCount &&
-                  substringCount < videoDetails.description.length &&
+                  substringCount < currentVideo.description.length &&
                   "..."}
-                {videoDetails.description.length > 200 && (
+                {currentVideo.description.length > 200 && (
                   <button
                     onClick={() =>
                       substringCount === 200

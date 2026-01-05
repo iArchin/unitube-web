@@ -485,6 +485,203 @@ export async function fetchAllCategories(
   }
 }
 
+// API response types for categories with videos
+export interface CategoryVideoResponse {
+  id: number;
+  title: string;
+  description: string;
+  slug: string;
+  videos: Array<{
+    id: number;
+    title: string;
+    description: string;
+    download_link: string | null;
+    poster: string | null;
+    category_id: number;
+    user_id: number;
+    category: {
+      id: number;
+      title: string;
+      description: string;
+      slug: string;
+    };
+  }>;
+}
+
+export interface CategoriesVideosResponse {
+  data: CategoryVideoResponse[];
+  meta: {
+    current_page: number;
+    next_page: number | null;
+    per_page: number;
+    total_videos: number;
+  };
+}
+
+export interface CategoryWithVideos {
+  id: number;
+  title: string;
+  description: string;
+  slug: string;
+  videos: Video[];
+}
+
+/**
+ * Fetches categories with their videos from the unitribe API
+ * @param token - Authentication token (required)
+ * @param page - Page number (default: 1)
+ * @param size - Number of categories per page (default: 10)
+ * @returns Array of categories with their videos transformed to Video type
+ */
+/**
+ * Fetches a single video by ID from the unitribe API
+ * @param videoId - Video ID (required)
+ * @param token - Authentication token (required)
+ * @returns Video data
+ */
+export async function fetchVideoById(
+  videoId: string,
+  token: string
+): Promise<Video> {
+  if (!videoId?.trim()) {
+    throw new ValidationError("Video ID cannot be empty");
+  }
+
+  if (!token?.trim()) {
+    throw new ValidationError("Authentication token is required");
+  }
+
+  try {
+    const { data } = await axios.get(
+      `https://api.unitribe.app/ut/api/videos/${videoId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000,
+      }
+    );
+
+    const video = data.data || data;
+
+    if (!video) {
+      throw new ValidationError("Video not found");
+    }
+
+    // Helper function to generate random view count
+    const getRandomViewCount = (): string => {
+      const views = Math.floor(Math.random() * 10000000) + 100;
+      return views.toString();
+    };
+
+    // Helper function to generate random date (within last 2 years)
+    const getRandomDate = (): string => {
+      const now = new Date();
+      const twoYearsAgo = new Date(now.getTime() - 2 * 365 * 24 * 60 * 60 * 1000);
+      const randomTime = twoYearsAgo.getTime() + Math.random() * (now.getTime() - twoYearsAgo.getTime());
+      return new Date(randomTime).toISOString();
+    };
+
+    // Use poster image for thumbnail, fallback to placeholder if not available
+    const thumbnail = video.poster || 
+      `https://via.placeholder.com/320x180/6366f1/ffffff?text=${encodeURIComponent((video.title || "Video").substring(0, 30))}`;
+
+    return {
+      id: video.id.toString(),
+      title: video.title || "Untitled Video",
+      description: video.description || "",
+      thumbnail,
+      viewCount: getRandomViewCount(),
+      channel: {
+        channelId: video.user_id?.toString() || "0",
+        channelTitle: "User Channel",
+        channelImage: `https://via.placeholder.com/40x40/6366f1/ffffff?text=U${video.user_id || "0"}`,
+      },
+      publishedDate: getRandomDate(),
+      download_link: video.download_link || null,
+    } as Video;
+  } catch (error) {
+    handleAPIError(error, "fetchVideoById");
+  }
+}
+
+export async function fetchCategoriesWithVideos(
+  token: string,
+  page: number = 1,
+  size: number = 10
+): Promise<CategoryWithVideos[]> {
+  if (!token?.trim()) {
+    throw new ValidationError("Authentication token is required");
+  }
+
+  try {
+    const { data } = await axios.get<CategoriesVideosResponse>(
+      `https://api.unitribe.app/ut/api/categories/videos`,
+      {
+        params: {
+          page,
+          size,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000,
+      }
+    );
+
+    if (!data || !data.data || !Array.isArray(data.data)) {
+      throw new ValidationError("Invalid response structure from categories/videos API");
+    }
+
+    // Helper function to generate random view count
+    const getRandomViewCount = (): string => {
+      const views = Math.floor(Math.random() * 10000000) + 100; // Random between 100 and 10,000,100
+      return views.toString();
+    };
+
+    // Helper function to generate random date (within last 2 years)
+    const getRandomDate = (): string => {
+      const now = new Date();
+      const twoYearsAgo = new Date(now.getTime() - 2 * 365 * 24 * 60 * 60 * 1000);
+      const randomTime = twoYearsAgo.getTime() + Math.random() * (now.getTime() - twoYearsAgo.getTime());
+      return new Date(randomTime).toISOString();
+    };
+
+    // Transform API response to CategoryWithVideos format
+    return data.data.map((category) => ({
+      id: category.id,
+      title: category.title,
+      description: category.description,
+      slug: category.slug,
+      videos: category.videos
+        // Filter out videos with null download_link
+        .filter((video) => video.download_link !== null)
+        .map((video) => {
+          // Use poster image for thumbnail, fallback to placeholder if not available
+          const thumbnail = video.poster || 
+            `https://via.placeholder.com/320x180/6366f1/ffffff?text=${encodeURIComponent(video.title.substring(0, 30))}`;
+
+          return {
+            id: video.id.toString(),
+            title: video.title || "Untitled Video",
+            description: video.description || "",
+            thumbnail,
+            viewCount: getRandomViewCount(),
+            channel: {
+              channelId: video.user_id.toString(),
+              channelTitle: "User Channel", // API doesn't provide channel name
+              channelImage: `https://via.placeholder.com/40x40/6366f1/ffffff?text=U${video.user_id}`, // Placeholder
+            },
+            publishedDate: getRandomDate(),
+            download_link: video.download_link,
+          } as Video;
+        }),
+    }));
+  } catch (error) {
+    handleAPIError(error, "fetchCategoriesWithVideos");
+  }
+}
+
 export interface UploadVideoData {
   title: string;
   description: string;

@@ -10,6 +10,7 @@ export type Video = {
     channelImage: string;
   };
   publishedDate: string;
+  download_link?: string | null;
 };
 
 export type ChannelDetails = {
