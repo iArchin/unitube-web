@@ -4,8 +4,8 @@ export default function ShortsLayout({
   children: React.ReactNode;
 }) {
   return (
-    <main className="bg-[#000000]">
-      <div className="h-screen overflow-hidden">{children}</div>
+    <main className="bg-background min-h-screen">
+      <div className="min-h-screen">{children}</div>
     </main>
   );
 }

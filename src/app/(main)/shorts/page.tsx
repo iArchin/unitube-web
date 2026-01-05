@@ -206,66 +206,65 @@ const ShortsPage = () => {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-[#000000]">
-        <p className="text-white">Loading shorts...</p>
+      <div className="h-screen flex items-center justify-center bg-background">
+        <p className="text-foreground">Loading shorts...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="h-screen flex items-center justify-center bg-[#000000]">
-        <p className="text-red-500">Error: {error}</p>
+      <div className="h-screen flex items-center justify-center bg-background">
+        <p className="text-destructive">Error: {error}</p>
       </div>
     );
   }
 
   if (shorts.length === 0) {
     return (
-      <div className="h-screen flex items-center justify-center bg-[#000000]">
-        <p className="text-white">No shorts available</p>
+      <div className="h-screen flex items-center justify-center bg-background">
+        <p className="text-foreground">No shorts available</p>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-[#000000] overflow-hidden relative z-50">
+    <div className="relative min-h-screen bg-background text-white">
       {/* Navigation Arrows */}
-      {currentIndex > 0 && (
+      <div className="fixed right-4 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-3">
         <button
           onClick={navigateUp}
-          className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 bg-black/50 hover:bg-black/70 rounded-full p-2 transition-all"
+          disabled={currentIndex === 0}
+          className="p-2 rounded-full bg-black/40 backdrop-blur hover:bg-black/60 disabled:opacity-40 transition-colors"
           aria-label="Previous short"
         >
           <ChevronUp className="w-6 h-6 text-white" />
         </button>
-      )}
-
-      {currentIndex < shorts.length - 1 && (
         <button
           onClick={navigateDown}
-          className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 bg-black/50 hover:bg-black/70 rounded-full p-2 transition-all"
+          disabled={currentIndex >= shorts.length - 1}
+          className="p-2 rounded-full bg-black/40 backdrop-blur hover:bg-black/60 disabled:opacity-40 transition-colors"
           aria-label="Next short"
         >
           <ChevronDown className="w-6 h-6 text-white" />
         </button>
-      )}
+      </div>
 
       {/* Shorts Container */}
       <div
         ref={containerRef}
-        className="h-full overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
+        className="h-screen overflow-y-auto snap-y snap-mandatory scrollbar-hide"
         style={{ scrollBehavior: "smooth" }}
       >
         {shorts.map((short, index) => (
           <div
             key={short.id}
             ref={(el) => (videoRefs.current[index] = el)}
-            className="h-screen w-full snap-start relative flex items-center justify-center"
+            className="h-screen snap-start flex flex-col items-center justify-center gap-5 px-4 md:px-6"
           >
             {/* Video Player */}
-            <div className="w-full h-full max-w-md mx-auto relative">
-              <div className="relative w-full h-full bg-black rounded-lg overflow-hidden">
+            <div className="w-full max-w-[480px] h-[80vh] max-h-[85vh]">
+              <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black/80">
                 {short.download_link ? (
                   <ReactPlayer
                     url={short.download_link}
@@ -275,6 +274,7 @@ const ShortsPage = () => {
                     controls={false}
                     loop={true}
                     muted={false}
+                    style={{ position: "absolute", top: 0, left: 0 }}
                     config={{
                       file: {
                         attributes: {
@@ -289,87 +289,77 @@ const ShortsPage = () => {
                   </div>
                 )}
               </div>
+            </div>
 
-              {/* Video Info Overlay */}
-              <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
-                <div className="flex items-start justify-between gap-4">
-                  {/* Left side - Channel info and description */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Avatar className="w-8 h-8">
-                        <AvatarImage
-                          src={short.channel.channelImage}
-                          alt={short.channel.channelTitle}
-                        />
-                        <AvatarFallback className="text-xs">
-                          {short.channel.channelTitle.substring(0, 2).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-white font-semibold text-sm truncate">
-                          {short.channel.channelTitle}
-                        </h3>
-                        <p className="text-gray-300 text-xs">
-                          {formatCount(+short.viewCount)} views
-                        </p>
-                      </div>
-                    </div>
-                    <p className="text-white text-sm line-clamp-2 mb-1">
-                      {short.title}
-                    </p>
-                    {short.description && (
-                      <p className="text-gray-300 text-xs line-clamp-1">
-                        {short.description}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Right side - Action buttons */}
-                  <div className="flex flex-col items-center gap-4">
-                    <button
-                      onClick={() => toggleLike(short.id)}
-                      className="flex flex-col items-center gap-1 group"
-                    >
-                      <div className="w-12 h-12 rounded-full bg-black/50 flex items-center justify-center group-hover:bg-black/70 transition-colors">
-                        <Heart
-                          className={`w-6 h-6 ${
-                            likedVideos.has(short.id)
-                              ? "text-red-500 fill-red-500"
-                              : "text-white"
-                          }`}
-                        />
-                      </div>
-                      <span className="text-white text-xs font-medium">
-                        {likedVideos.has(short.id) ? "Liked" : "Like"}
-                      </span>
-                    </button>
-
-                    <button
-                      onClick={() => openComments(short.id)}
-                      className="flex flex-col items-center gap-1 group"
-                    >
-                      <div className="w-12 h-12 rounded-full bg-black/50 flex items-center justify-center group-hover:bg-black/70 transition-colors">
-                        <MessageCircle className="w-6 h-6 text-white" />
-                      </div>
-                      <span className="text-white text-xs font-medium">
-                        {defaultComments.length}
-                      </span>
-                    </button>
-
-                    <button className="flex flex-col items-center gap-1 group">
-                      <div className="w-12 h-12 rounded-full bg-black/50 flex items-center justify-center group-hover:bg-black/70 transition-colors">
-                        <Share2 className="w-6 h-6 text-white" />
-                      </div>
-                      <span className="text-white text-xs font-medium">Share</span>
-                    </button>
-
-                    <button className="flex flex-col items-center gap-1 group">
-                      <div className="w-12 h-12 rounded-full bg-black/50 flex items-center justify-center group-hover:bg-black/70 transition-colors">
-                        <MoreVertical className="w-6 h-6 text-white" />
-                      </div>
-                    </button>
-                  </div>
+            {/* Video Info & Actions below the video */}
+            <div className="w-full max-w-[480px] space-y-3">
+              <div className="flex items-center gap-3">
+                <Avatar className="w-10 h-10">
+                  <AvatarImage
+                    src={short.channel.channelImage}
+                    alt={short.channel.channelTitle}
+                  />
+                  <AvatarFallback className="text-xs">
+                    {short.channel.channelTitle.substring(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-base font-semibold truncate">
+                    {short.channel.channelTitle}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {formatCount(+short.viewCount)} views •{" "}
+                    {formatPublishedDate(short.publishedDate)}
+                  </p>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-lg font-semibold leading-snug line-clamp-3">
+                  {short.title}
+                </p>
+                {short.description && (
+                  <p className="text-sm text-muted-foreground line-clamp-3">
+                    {short.description}
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => toggleLike(short.id)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                  >
+                    <Heart
+                      className={`w-5 h-5 ${
+                        likedVideos.has(short.id)
+                          ? "text-red-500 fill-red-500"
+                          : "text-white"
+                      }`}
+                    />
+                    <span className="text-sm">
+                      {likedVideos.has(short.id) ? "Liked" : "Like"}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={() => openComments(short.id)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                  >
+                    <MessageCircle className="w-5 h-5 text-white" />
+                    <span className="text-sm">{defaultComments.length}</span>
+                  </button>
+
+                  <button className="flex items-center gap-2 px-3 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
+                    <Share2 className="w-5 h-5 text-white" />
+                    <span className="text-sm">Share</span>
+                  </button>
+                </div>
+
+                <button className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
+                  <MoreVertical className="w-5 h-5 text-white" />
+                </button>
               </div>
             </div>
           </div>
