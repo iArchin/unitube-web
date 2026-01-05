@@ -53,7 +53,7 @@ function TopStreamingContent() {
         // Handle "shorts" category specially
         if (categoryParam.toLowerCase() === "shorts") {
           setCategoryTitle("Shorts");
-          const fetchedVideos = await fetchShortVideos(token, currentPage, 20);
+          const fetchedVideos = await fetchShortVideos(currentPage, 20);
           const validVideos = fetchedVideos.filter(
             (video) => video !== null && video !== undefined
           );
