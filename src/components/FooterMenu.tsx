@@ -11,17 +11,20 @@ const FooterMenu = () => {
   const user = useSelector((state: RootState) => state.auth.user);
   return (
     <footer className='bg-white dark:bg-black md:hidden text-[8px] h-14 fixed w-full flex items-center justify-around bottom-0 left-0 z-20'>
-      <div className='flex flex-col items-center'>
+      <Link href="/" className='flex flex-col items-center'>
         <Home />
         <span>Home</span>
-      </div>
+      </Link>
 
       <Link href="/shorts" className='flex flex-col items-center'>
         <FileVideo />
         <span>Shorts</span>
       </Link>
 
-      <PlusCircle />
+      <Link href="/create" className='flex flex-col items-center'>
+        <PlusCircle />
+        <span>Create</span>
+      </Link>
 
       <div className='flex flex-col items-center'>
         <MonitorPlay />
