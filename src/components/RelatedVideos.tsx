@@ -40,7 +40,13 @@ const RelatedVideos = ({ video }: { video: Video }) => {
 
       <div className='flex-1'>
         <h4 className='text-sm'>{video.title.substring(0, 50)}</h4>
-        <p className='text-xs my-2'>{video.channel.channelTitle}</p>
+        <Link 
+          href={`/channels/${video.channel.channelId}`}
+          onClick={(e) => e.stopPropagation()}
+          className='text-xs my-2 block hover:text-purple-400 transition-colors'
+        >
+          {video.channel.channelTitle}
+        </Link>
         <div className='text-xs flex items-center text-background-light'>
           {formatCount(+video.viewCount)} views {<Dot />}{' '}
           {formatPublishedDate(video.publishedDate)}

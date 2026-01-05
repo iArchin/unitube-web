@@ -754,6 +754,7 @@ export interface UploadVideoData {
   video_type: string;
   category_id: string;
   file: File;
+  poster?: File | "";
 }
 
 export async function uploadVideo(
@@ -788,7 +789,7 @@ export async function uploadVideo(
   try {
     const formData = new FormData();
     formData.append("file", data.file);
-
+    formData.append("poster", "");
     // Build query parameters for other fields
     const queryParams = new URLSearchParams({
       title: data.title,
@@ -798,7 +799,7 @@ export async function uploadVideo(
     });
 
     const res = await axios.post(
-      `https://api.unitribe.app/ut/api/videos?${queryParams.toString()}`,
+      `https://api.unitribe.app/ut/api/videos/upload?${queryParams.toString()}`,
       formData,
       {
         headers: {
@@ -820,5 +821,158 @@ export async function uploadVideo(
     return { data: res.data, status: res.status };
   } catch (error) {
     handleAPIError(error, "uploadVideo");
+  }
+}
+
+// API response type for user videos
+export interface UserVideosResponse {
+  data: Array<{
+    id: number;
+    video_type: string;
+    category_id: number;
+    poster: string | null;
+    title: string;
+    description: string;
+    user_id: number;
+    video_link: string;
+    created_at: string;
+    category: {
+      id: number;
+      title: string;
+      slug: string;
+    };
+    user: {
+      id: number;
+      name: string;
+      email: string;
+    };
+  }>;
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
+/**
+ * Fetches videos uploaded by a specific user
+ * @param userId - User ID (required)
+ * @param page - Page number (default: 1)
+ * @param size - Number of videos per page (default: 10)
+ * @param token - Authentication token (optional)
+ * @returns Array of videos uploaded by the user
+ */
+export async function fetchUserVideos(
+  userId: string | number,
+  page: number = 1,
+  size: number = 10,
+  token?: string
+): Promise<{
+  videos: Video[];
+  pagination: { page: number; total: number; hasMore: boolean };
+}> {
+  if (!userId) {
+    throw new ValidationError("User ID cannot be empty");
+  }
+
+  try {
+    const headers: Record<string, string> = {};
+    // Token is optional for this endpoint
+    if (token?.trim()) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const { data } = await axios.get<UserVideosResponse>(
+      `https://api.unitribe.app/ut/api/videos/get-video/public/user`,
+      {
+        params: {
+          user_id: userId,
+          page,
+          size,
+        },
+        headers,
+        timeout: 10000,
+      }
+    );
+
+    if (!data || !data.data || !Array.isArray(data.data)) {
+      throw new ValidationError(
+        "Invalid response structure from videos/get-video/public/user API"
+      );
+    }
+
+    // Helper function to generate random view count
+    const getRandomViewCount = (): string => {
+      const views = Math.floor(Math.random() * 10000000) + 100;
+      return views.toString();
+    };
+
+    // Transform API response to Video format
+    const videos = data.data
+      .filter(
+        (video) =>
+          video !== null &&
+          video !== undefined &&
+          video.user !== null &&
+          video.user !== undefined
+      )
+      .map((video) => {
+        // Use poster image for thumbnail, fallback to placeholder
+        const isShort = video.video_type === "short";
+        const placeholderDimensions = isShort ? "180x320" : "320x180";
+        const thumbnail =
+          video.poster ||
+          `https://via.placeholder.com/${placeholderDimensions}/6366f1/ffffff?text=${encodeURIComponent(
+            (video.title || (isShort ? "Short" : "Video")).substring(0, 20)
+          )}`;
+
+        // Safely extract user info with fallbacks
+        const user = video.user || {};
+        const userName = user.name || "Unknown User";
+        const userId = user.id?.toString() || "0";
+        const userEmail = user.email || "";
+
+        return {
+          id: video.id.toString(),
+          title: video.title || "Untitled Video",
+          description: video.description || "",
+          thumbnail,
+          viewCount: getRandomViewCount(),
+          channel: {
+            channelId: userId,
+            channelTitle: userName,
+            channelImage: `https://via.placeholder.com/40x40/6366f1/ffffff?text=${userName
+              .substring(0, 2)
+              .toUpperCase()}`,
+          },
+          user: {
+            name: userName,
+            email: userEmail,
+          },
+          publishedDate: video.created_at,
+          download_link: video.video_link || null,
+          video_type: video.video_type || "long",
+        } as Video;
+      });
+
+    const meta = data.meta || {
+      current_page: page,
+      last_page: 1,
+      per_page: size,
+      total: videos.length,
+    };
+    const hasMore = meta.current_page < meta.last_page;
+
+    return {
+      videos,
+      pagination: {
+        page: meta.current_page || page,
+        total: meta.total || videos.length,
+        hasMore,
+      },
+    };
+  } catch (error) {
+    handleAPIError(error, "fetchUserVideos");
   }
 }

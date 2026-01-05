@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useSelector } from "react-redux";
+import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatCount, formatPublishedDate } from "@/lib/utils";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
@@ -11,8 +12,9 @@ import RelatedVideos from "@/components/RelatedVideos";
 import { generateMockVideos } from "@/lib/mockData";
 import { Video } from "../../../../../types/custom_types";
 import { Button } from "@/components/ui/button";
-import { fetchVideoById } from "@/lib/api";
+import { fetchVideoById, fetchVideosByCategoryId } from "@/lib/api";
 import { RootState } from "@/store/store";
+import axios from "axios";
 
 // Comment type
 interface Comment {
@@ -123,6 +125,8 @@ const VideoDetails = () => {
   const [userDisliked, setUserDisliked] = useState(false);
   const [comments, setComments] = useState<Comment[]>(defaultComments);
   const [subscriberCount] = useState(() => Math.floor(Math.random() * 1000000));
+  const [relatedVideos, setRelatedVideos] = useState<Video[]>([]);
+  const [relatedVideosLoading, setRelatedVideosLoading] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -144,12 +148,58 @@ const VideoDetails = () => {
         setVideoDetails(video);
         // Initialize likes/dislikes
         setLikes(Math.floor(Math.random() * 50000));
+
+        // Fetch category ID from the API to get related videos
+        try {
+          const headers: Record<string, string> = {};
+          if (token?.trim()) {
+            headers.Authorization = `Bearer ${token}`;
+          }
+
+          const { data } = await axios.get(
+            `https://api.unitribe.app/ut/api/videos/get-video`,
+            {
+              params: { id },
+              headers,
+              timeout: 10000,
+            }
+          );
+
+          if (data?.category?.id && token) {
+            // Fetch related videos from the same category
+            setRelatedVideosLoading(true);
+            const categoryVideos = await fetchVideosByCategoryId(
+              data.category.id,
+              token,
+              1,
+              20 // Fetch more videos to have enough after filtering
+            );
+
+            // Filter out the current video and limit to 8 videos
+            const filteredVideos = categoryVideos
+              .filter((v) => v.id !== id)
+              .slice(0, 8);
+
+            setRelatedVideos(filteredVideos);
+          } else {
+            // Fallback to mock videos if no category or token
+            setRelatedVideos(generateMockVideos(8, "trending"));
+          }
+        } catch (relatedErr) {
+          console.error("Failed to fetch related videos:", relatedErr);
+          // Fallback to mock videos on error
+          setRelatedVideos(generateMockVideos(8, "trending"));
+        } finally {
+          setRelatedVideosLoading(false);
+        }
       } catch (err) {
         console.error("Failed to fetch video:", err);
         setError(err instanceof Error ? err.message : "Failed to load video");
         // Fallback to default video on error
         setVideoDetails(getDefaultVideo(id));
         setLikes(Math.floor(Math.random() * 50000));
+        // Use mock videos as fallback
+        setRelatedVideos(generateMockVideos(8, "trending"));
       } finally {
         setLoading(false);
       }
@@ -280,9 +330,6 @@ const VideoDetails = () => {
     );
   }, [videoDetails?.publishedDate, currentVideo.publishedDate]);
 
-  // Generate related videos using mock data - memoize to prevent regeneration on re-renders
-  const relatedVideos = useMemo(() => generateMockVideos(8, "trending"), []);
-
   // Determine video URL - prioritize download_link from:
   // 1. videoDetails (from API fetch)
   // 2. currentVideo (fallback/default)
@@ -345,8 +392,14 @@ const VideoDetails = () => {
               </h3>
 
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-                <div className="flex items-center space-x-3">
-                  <Avatar>
+                <Link
+                  href={`/channels/${
+                    videoDetails?.channel.channelId ||
+                    currentVideo.channel.channelId
+                  }`}
+                  className="flex items-center space-x-3 hover:opacity-80 transition-opacity group"
+                >
+                  <Avatar className="group-hover:ring-2 ring-purple-500 transition-all">
                     <AvatarImage
                       src={
                         videoDetails?.channel.channelImage ||
@@ -370,7 +423,7 @@ const VideoDetails = () => {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h4 className="text-white text-sm font-medium">
+                    <h4 className="text-white text-sm font-medium group-hover:text-purple-400 transition-colors">
                       {videoDetails?.channel.channelTitle ||
                         currentVideo.channel.channelTitle}
                     </h4>
@@ -378,7 +431,7 @@ const VideoDetails = () => {
                       {formatCount(subscriberCount)} subscribers
                     </p>
                   </div>
-                </div>
+                </Link>
 
                 <div className="flex space-x-4 text-sm items-center bg-[#1a1a1a] text-white px-3 md:px-5 py-2 rounded-3xl">
                   <button
@@ -561,11 +614,23 @@ const VideoDetails = () => {
             <h4 className="text-white font-semibold mb-4 px-2">
               Related Videos
             </h4>
-            <div className="space-y-2">
-              {relatedVideos.map((video) => (
-                <RelatedVideos key={video.id} video={video} />
-              ))}
-            </div>
+            {relatedVideosLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-gray-400 text-sm">
+                  Loading related videos...
+                </p>
+              </div>
+            ) : relatedVideos.length > 0 ? (
+              <div className="space-y-2">
+                {relatedVideos.map((video) => (
+                  <RelatedVideos key={video.id} video={video} />
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-gray-400 text-sm">No related videos found</p>
+              </div>
+            )}
           </aside>
         </div>
       </div>

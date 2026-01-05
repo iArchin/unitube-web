@@ -50,20 +50,30 @@ const Thumbnail = ({ video }: { video: Video }) => {
         )}
       </div>
       <div className="flex space-x-2 py-3">
-        <Avatar>
-          <AvatarImage
-            src={video.channel.channelImage}
-            alt={video.channel.channelTitle}
-          />
-          <AvatarFallback>AB</AvatarFallback>
-        </Avatar>
+        <Link 
+          href={`/channels/${video.channel.channelId}`}
+          onClick={(e) => e.stopPropagation()}
+          className="flex-shrink-0"
+        >
+          <Avatar className="cursor-pointer hover:ring-2 ring-purple-500 transition-all">
+            <AvatarImage
+              src={video.channel.channelImage}
+              alt={video.channel.channelTitle}
+            />
+            <AvatarFallback>AB</AvatarFallback>
+          </Avatar>
+        </Link>
         <div className="flex flex-col">
           <h4 className="scroll-m-20 text-sm font-bold tracking-tight">
             {video.title.substring(0, 60)}
           </h4>
-          <p className="text-xs text-background-dark dark:text-background-light">
+          <Link 
+            href={`/channels/${video.channel.channelId}`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs text-background-dark dark:text-background-light hover:text-purple-400 transition-colors"
+          >
             {video.channel.channelTitle}
-          </p>
+          </Link>
           <div className="flex text-xs dark:text-background-light text-background-dark">
             <p className="text-xs">{formatCount(+video.viewCount)}</p>{" "}
             <Dot className="w-4 h-4" />{" "}

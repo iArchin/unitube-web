@@ -15,6 +15,7 @@ export type Video = {
   };
   publishedDate: string;
   download_link?: string | null;
+  video_type?: string;
 };
 
 export type ChannelDetails = {

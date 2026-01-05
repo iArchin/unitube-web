@@ -194,7 +194,7 @@ const TopNavigation = () => {
                           <p className="text-gray-400">{user?.email}</p>
                         </span>
                         <Link
-                          href={`/channels/${process.env.NEXT_PUBLIC_CHANNEL_ID}`}
+                          href={`/channels/${user?.id || ""}`}
                           className="text-purple-400 hover:text-purple-300"
                         >
                           View your channel
@@ -238,7 +238,7 @@ const TopNavigation = () => {
                           <p className="text-gray-400">{user?.email}</p>
                         </span>
                         <Link
-                          href={`/channels/${process.env.NEXT_PUBLIC_CHANNEL_ID}`}
+                          href={`/channels/${user?.id || ""}`}
                           className="text-purple-400 hover:text-purple-300"
                         >
                           View your channel

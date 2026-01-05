@@ -44,11 +44,13 @@ export default function CreatePage() {
     description: string;
     category: string;
     file: File | null;
+    poster: File | null;
   }>({
     title: "",
     description: "",
     category: "",
     file: null,
+    poster: null,
   });
 
   // Short upload state
@@ -64,11 +66,13 @@ export default function CreatePage() {
     description: string;
     category: string;
     file: File | null;
+    poster: File | null;
   }>({
     title: "",
     description: "",
     category: "",
     file: null,
+    poster: null,
   });
 
   const { token, isAuthenticated } = useAppSelector((state) => state.auth);
@@ -124,6 +128,7 @@ export default function CreatePage() {
       description: "",
       category: "",
       file: null,
+      poster: null,
     });
     setUploadError(null);
     setUploadProgress(0);
@@ -141,12 +146,15 @@ export default function CreatePage() {
       description: "",
       category: "",
       file: null,
+      poster: null,
     });
     setShortUploadError(null);
     setShortUploadProgress(0);
     setShortUploadSuccess(false);
     // Reset file input
-    const shortFileInput = document.getElementById("short-file") as HTMLInputElement;
+    const shortFileInput = document.getElementById(
+      "short-file"
+    ) as HTMLInputElement;
     if (shortFileInput) {
       shortFileInput.value = "";
     }
@@ -254,6 +262,7 @@ export default function CreatePage() {
         video_type: "long", // Always set to "long" as per requirements
         category_id: formData.category,
         file: formData.file,
+        poster: "",
       };
 
       const response = await uploadVideo(uploadData, token, (progress) => {
@@ -318,6 +327,7 @@ export default function CreatePage() {
         video_type: "short", // Set to "short" for shorts
         category_id: shortFormData.category,
         file: shortFormData.file,
+        poster: "",
       };
 
       const response = await uploadVideo(uploadData, token, (progress) => {
@@ -591,7 +601,10 @@ export default function CreatePage() {
           </Dialog>
 
           {/* Create Short Card */}
-          <Dialog open={isShortDialogOpen} onOpenChange={handleShortDialogChange}>
+          <Dialog
+            open={isShortDialogOpen}
+            onOpenChange={handleShortDialogChange}
+          >
             <DialogTrigger asChild>
               <div className="bg-[#1a1a1a] rounded-xl p-8 border border-[#333] hover:border-purple-500 transition-colors cursor-pointer">
                 <div className="flex flex-col items-center text-center">
@@ -728,7 +741,8 @@ export default function CreatePage() {
                           {shortFormData.file.name}
                         </p>
                         <p className="text-xs text-gray-400">
-                          {(shortFormData.file.size / 1024 / 1024).toFixed(2)} MB
+                          {(shortFormData.file.size / 1024 / 1024).toFixed(2)}{" "}
+                          MB
                         </p>
                       </div>
                     )}
@@ -741,7 +755,9 @@ export default function CreatePage() {
                       <span className="text-white font-medium">
                         Uploading...
                       </span>
-                      <span className="text-gray-400">{shortUploadProgress}%</span>
+                      <span className="text-gray-400">
+                        {shortUploadProgress}%
+                      </span>
                     </div>
                     <div className="w-full bg-[#2a2a2a] rounded-full h-2.5 border border-[#444]">
                       <div
@@ -792,7 +808,9 @@ export default function CreatePage() {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={isUploadingShort || !isAuthenticated || shortUploadSuccess}
+                    disabled={
+                      isUploadingShort || !isAuthenticated || shortUploadSuccess
+                    }
                     className="bg-purple-500 hover:bg-purple-600 text-white"
                   >
                     {isUploadingShort ? (
