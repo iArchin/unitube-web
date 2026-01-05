@@ -10,15 +10,15 @@ import {
   fetchShortVideos,
   Category,
 } from "@/lib/api";
-import { Video } from "../../../types/custom_types";
 import { RootState } from "@/store/store";
 import { Loader2 } from "lucide-react";
+import { Video } from "../../../../types/custom_types";
 
 function TopStreamingContent() {
   const searchParams = useSearchParams();
   const categoryParam = searchParams.get("category") || "";
   const token = useSelector((state: RootState) => state.auth.token);
-  
+
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,13 +57,13 @@ function TopStreamingContent() {
           const validVideos = fetchedVideos.filter(
             (video) => video !== null && video !== undefined
           );
-          
+
           if (currentPage === 1) {
             setVideos(validVideos);
           } else {
             setVideos((prev) => [...prev, ...validVideos]);
           }
-          
+
           setHasMore(validVideos.length >= 20);
           setLoading(false);
           return;
@@ -71,7 +71,7 @@ function TopStreamingContent() {
 
         // Check if categoryParam is a number (category ID) or a string (slug)
         let categoryId: number;
-        
+
         // Try to parse as number first
         const parsedId = parseInt(categoryParam, 10);
         if (!isNaN(parsedId) && parsedId > 0) {
@@ -86,18 +86,21 @@ function TopStreamingContent() {
               cat.name?.toLowerCase() === categoryParam.toLowerCase() ||
               cat.title?.toLowerCase() === categoryParam.toLowerCase()
           );
-          
+
           if (!foundCategory) {
             throw new Error(`Category "${categoryParam}" not found`);
           }
-          
+
           // Get the ID - handle both string and number IDs
-          categoryId = typeof foundCategory.id === "string" 
-            ? parseInt(foundCategory.id, 10) 
-            : foundCategory.id;
-          
+          categoryId =
+            typeof foundCategory.id === "string"
+              ? parseInt(foundCategory.id, 10)
+              : foundCategory.id;
+
           // Set category title from the found category
-          setCategoryTitle(foundCategory.title || foundCategory.name || categoryParam);
+          setCategoryTitle(
+            foundCategory.title || foundCategory.name || categoryParam
+          );
         }
 
         // Fetch videos by category ID
@@ -177,7 +180,9 @@ function TopStreamingContent() {
 
         {videos.length === 0 ? (
           <div className="flex items-center justify-center h-64">
-            <p className="text-gray-400">No videos available for this category</p>
+            <p className="text-gray-400">
+              No videos available for this category
+            </p>
           </div>
         ) : (
           <>
@@ -186,7 +191,7 @@ function TopStreamingContent() {
                 <Thumbnail key={video.id} video={video} />
               ))}
             </div>
-            
+
             {hasMore && (
               <div className="flex justify-center mt-8">
                 <button
@@ -214,15 +219,16 @@ function TopStreamingContent() {
 
 export default function TopStreamingPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen py-4 px-2 md:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-white">Loading...</div>
+    <Suspense
+      fallback={
+        <div className="min-h-screen py-4 px-2 md:px-8">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-white">Loading...</div>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <TopStreamingContent />
     </Suspense>
   );
 }
-
