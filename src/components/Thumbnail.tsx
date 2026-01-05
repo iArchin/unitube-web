@@ -7,11 +7,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatCount, formatPublishedDate } from "@/lib/utils";
 
 const Thumbnail = ({ video }: { video: Video }) => {
+  // Build URL with download_link as query parameter if available
+  const watchUrl = video.download_link
+    ? `/watch/${video.id}?url=${encodeURIComponent(video.download_link)}`
+    : `/watch/${video.id}`;
+
   return (
-    <Link
-      href={`/watch/${video.id}`}
-      className="w-[300px] mx-auto md:w-[300px] my-4"
-    >
+    <Link href={watchUrl} className="w-[300px] mx-auto md:w-[300px] my-4">
       <div className="h-44 overflow-hidden rounded-2xl bg-slate-300">
         <Image
           src={video.thumbnail}

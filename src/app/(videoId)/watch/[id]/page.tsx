@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useSelector } from "react-redux";
@@ -96,6 +96,7 @@ const defaultComments = [
 
 const VideoDetails = () => {
   const { id } = useParams();
+  const searchParams = useSearchParams();
   const token = useSelector((state: RootState) => state.auth.token);
   const [isMounted, setIsMounted] = useState(false);
   const [substringCount, setSubstringCount] = useState<undefined | number>(200);
@@ -103,6 +104,9 @@ const VideoDetails = () => {
   const [videoDetails, setVideoDetails] = useState<Video | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // Get download_link from URL query parameter if available
+  const urlDownloadLink = searchParams.get("url");
 
   useEffect(() => {
     setIsMounted(true);
@@ -110,7 +114,59 @@ const VideoDetails = () => {
 
   useEffect(() => {
     const loadVideo = async () => {
-      if (!id || !token) {
+      if (!id) {
+        setVideoDetails(getDefaultVideo(id));
+        setLoading(false);
+        return;
+      }
+
+      // If download_link is provided in URL, use it immediately
+      if (urlDownloadLink) {
+        try {
+          setLoading(true);
+          setError(null);
+          // Try to fetch video details, but use URL download_link if available
+          if (token) {
+            try {
+              const video = await fetchVideoById(id as string, token);
+              // Override download_link with the one from URL if it exists
+              setVideoDetails({
+                ...video,
+                download_link: urlDownloadLink,
+              });
+            } catch (err) {
+              // If fetch fails, create a minimal video object with the download_link
+              console.warn("Failed to fetch video details, using URL download_link:", err);
+              const defaultVideo = getDefaultVideo(id);
+              setVideoDetails({
+                ...defaultVideo,
+                download_link: urlDownloadLink,
+              });
+            }
+          } else {
+            // No token, use default video with download_link from URL
+            const defaultVideo = getDefaultVideo(id);
+            setVideoDetails({
+              ...defaultVideo,
+              download_link: urlDownloadLink,
+            });
+          }
+        } catch (err) {
+          console.error("Failed to load video:", err);
+          setError(err instanceof Error ? err.message : "Failed to load video");
+          const defaultVideo = getDefaultVideo(id);
+          setVideoDetails({
+            ...defaultVideo,
+            download_link: urlDownloadLink || null,
+          });
+        } finally {
+          setLoading(false);
+        }
+        return;
+      }
+
+      // No download_link in URL, fetch from API
+      if (!token) {
         // Fallback to default video if no token
         setVideoDetails(getDefaultVideo(id));
         setLoading(false);
@@ -133,7 +189,7 @@ const VideoDetails = () => {
     };
 
     loadVideo();
-  }, [id, token]);
+  }, [id, token, urlDownloadLink]);
 
   // Use default video data if not loaded yet
   const currentVideo = videoDetails || getDefaultVideo(id);
@@ -141,8 +197,12 @@ const VideoDetails = () => {
   // Generate related videos using mock data
   const relatedVideos = generateMockVideos(8, "trending");
 
-  // Determine video URL - use download_link if available, otherwise fallback to YouTube
-  const videoUrl = currentVideo.download_link || `https://www.youtube.com/watch?v=dQw4w9WgXcQ`;
+  // Determine video URL - prioritize download_link from URL query param, then from currentVideo
+  // If no download_link, fallback to YouTube (though this shouldn't happen for uploaded videos)
+  const videoUrl = urlDownloadLink || currentVideo.download_link || `https://www.youtube.com/watch?v=dQw4w9WgXcQ`;
+  
+  // Check if we have a valid video URL to play (either from URL param or from video details)
+  const hasVideoUrl = !!urlDownloadLink || !!currentVideo.download_link;
 
   return (
     <div className="min-h-screen bg-[#111111] pt-16 md:pt-20">
@@ -153,15 +213,15 @@ const VideoDetails = () => {
             {/* Video Player */}
             <div className="w-full mb-4">
               <div className="relative aspect-video rounded-xl overflow-hidden bg-black">
-                {loading ? (
+                {loading && !urlDownloadLink ? (
                   <div className="w-full h-full flex items-center justify-center">
                     <p className="text-white">Loading video...</p>
                   </div>
-                ) : error && !currentVideo.download_link ? (
+                ) : error && !hasVideoUrl ? (
                   <div className="w-full h-full flex items-center justify-center">
                     <p className="text-red-500">Error: {error}</p>
                   </div>
-                ) : isMounted ? (
+                ) : isMounted && hasVideoUrl ? (
                   <ReactPlayer
                     url={videoUrl}
                     width="100%"
@@ -182,7 +242,11 @@ const VideoDetails = () => {
                       },
                     }}
                   />
-                ) : null}
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <p className="text-white">No video available</p>
+                  </div>
+                )}
               </div>
             </div>
 

@@ -7,9 +7,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatCount, formatPublishedDate } from "@/lib/utils";
 
 const HorizontalThumbnail = ({ video }: { video: Video }) => {
+  // Build URL with download_link as query parameter if available
+  const watchUrl = video.download_link
+    ? `/watch/${video.id}?url=${encodeURIComponent(video.download_link)}`
+    : `/watch/${video.id}`;
+
   return (
     <Link 
-      href={`/watch/${video.id}`} 
+      href={watchUrl} 
       className="w-[280px] flex-shrink-0"
       draggable="false"
       onDragStart={(e) => e.preventDefault()}

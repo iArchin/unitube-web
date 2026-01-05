@@ -6,9 +6,14 @@ import { formatCount, formatPublishedDate } from '@/lib/utils';
 import { Video } from '../../types/custom_types';
 
 const RelatedVideos = ({ video }: { video: Video }) => {
+  // Build URL with download_link as query parameter if available
+  const watchUrl = video?.download_link
+    ? `/watch/${video.id}?url=${encodeURIComponent(video.download_link)}`
+    : `/watch/${video?.id}`;
+
   return (
     <Link
-      href={`/watch/${video?.id}`}
+      href={watchUrl}
       className='h-32 my-4 flex gap-3 justify-between'
     >
       <div className='flex-1 rounded-2xl overflow-hidden'>
