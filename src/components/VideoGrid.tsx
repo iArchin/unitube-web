@@ -41,7 +41,7 @@ const VideoGrid = () => {
         ]);
 
         setCategoriesData(categoriesData);
-        // Filter out null videos and videos with missing critical properties
+        // Filter out null videos, videos with missing critical properties, and videos with null download_link
         setShortsVideos(
           shortsData.filter(
             (video) =>
@@ -49,7 +49,9 @@ const VideoGrid = () => {
               video !== undefined &&
               video.id &&
               video.title &&
-              video.thumbnail
+              video.thumbnail &&
+              video.download_link !== null &&
+              video.download_link !== undefined
           )
         );
       } catch (err) {
@@ -108,14 +110,16 @@ const VideoGrid = () => {
       cat.title.toLowerCase() !== "shorts"
   );
 
-  // Filter out null videos and videos with missing critical properties from shorts
+  // Filter out null videos, videos with missing critical properties, and videos with null download_link from shorts
   const validShortsVideos = shortsVideos.filter(
     (video) =>
       video !== null &&
       video !== undefined &&
       video.id &&
       video.title &&
-      video.thumbnail
+      video.thumbnail &&
+      video.download_link !== null &&
+      video.download_link !== undefined
   );
 
   return (

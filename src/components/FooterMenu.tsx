@@ -11,10 +11,10 @@ const FooterMenu = () => {
         <span>Home</span>
       </div>
 
-      <div className='flex flex-col items-center'>
+      <Link href="/shorts" className='flex flex-col items-center'>
         <FileVideo />
         <span>Shorts</span>
-      </div>
+      </Link>
 
       <PlusCircle />
 

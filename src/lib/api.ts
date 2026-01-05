@@ -763,6 +763,8 @@ export async function fetchShortVideos(
           video !== undefined &&
           video.id &&
           video.title &&
+          video.download_link !== null && // Filter out videos with null download_link
+          video.download_link !== undefined &&
           (video.poster || video.title) // At least have a title to create placeholder
       )
       .map((video) => {
@@ -791,7 +793,9 @@ export async function fetchShortVideos(
           video !== undefined &&
           video.id &&
           video.title &&
-          video.thumbnail
+          video.thumbnail &&
+          video.download_link !== null && // Filter out videos with null download_link
+          video.download_link !== undefined
       );
   } catch (error) {
     handleAPIError(error, "fetchShortVideos");
