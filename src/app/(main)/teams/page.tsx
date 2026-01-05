@@ -7,8 +7,7 @@ export default function TeamsPage() {
   return (
     <div className="min-h-screen">
       <HeroBanner />
-      <VideoGrid categories={["sports", "sports", "sports", "sports", "sports"]} />
+      <VideoGrid />
     </div>
   );
 }
-

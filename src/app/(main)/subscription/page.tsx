@@ -51,7 +51,7 @@ export default function SubscriptionPage() {
           <h2 className="text-2xl font-bold text-white mb-4">
             Premium Content
           </h2>
-          <VideoGrid categories={["trending", "music", "entertainment"]} />
+          <VideoGrid />
         </div>
 
         {/* Subscribe Button */}
