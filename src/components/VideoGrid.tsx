@@ -12,7 +12,7 @@ import {
 import { Video } from "../../types/custom_types";
 import { RootState } from "@/store/store";
 
-const VideoGrid = ({ categories }: { categories: string[] }) => {
+const VideoGrid = () => {
   const router = useRouter();
   const token = useSelector((state: RootState) => state.auth.token);
   const [categoriesData, setCategoriesData] = useState<CategoryWithVideos[]>(

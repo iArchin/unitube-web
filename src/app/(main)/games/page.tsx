@@ -7,8 +7,7 @@ export default function GamesPage() {
   return (
     <div className="min-h-screen">
       <HeroBanner />
-      <VideoGrid categories={["gaming", "gaming", "gaming", "gaming", "gaming"]} />
+      <VideoGrid />
     </div>
   );
 }
-
