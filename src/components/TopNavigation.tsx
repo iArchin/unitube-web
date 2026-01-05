@@ -52,19 +52,19 @@ const TopNavigation = () => {
           </Link>
           <div className="hidden md:flex items-center space-x-8">
             <Link
-              href="/top"
+              href="/"
               className="text-sm font-medium text-white hover:text-purple-400 transition-colors"
             >
               TOP STREAMING
             </Link>
             <Link
-              href="/top?category=gaming"
+              href="/"
               className="text-sm font-medium text-white hover:text-purple-400 transition-colors"
             >
               GAMES
             </Link>
             <Link
-              href="/top?category=sports"
+              href="/"
               className="text-sm font-medium text-white hover:text-purple-400 transition-colors"
             >
               TEAMS
@@ -97,7 +97,10 @@ const TopNavigation = () => {
                 className="cursor-pointer text-white hover:text-purple-400 transition-colors"
               />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-80 bg-[#1a1a1a] border-[#333]">
+            <DropdownMenuContent
+              align="end"
+              className="w-80 bg-[#1a1a1a] border-[#333]"
+            >
               <DropdownMenuLabel className="text-white font-semibold px-4 py-3 border-b border-[#333]">
                 Notifications
               </DropdownMenuLabel>
@@ -110,7 +113,9 @@ const TopNavigation = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem className="focus:bg-[#2a2a2a] focus:text-white cursor-pointer px-4 py-3">
                   <div className="flex flex-col space-y-1 w-full">
-                    <p className="text-sm text-white">You have a new subscriber</p>
+                    <p className="text-sm text-white">
+                      You have a new subscriber
+                    </p>
                     <p className="text-xs text-gray-400">5 hours ago</p>
                   </div>
                 </DropdownMenuItem>
@@ -122,7 +127,9 @@ const TopNavigation = () => {
                 </DropdownMenuItem>
                 <DropdownMenuItem className="focus:bg-[#2a2a2a] focus:text-white cursor-pointer px-4 py-3">
                   <div className="flex flex-col space-y-1 w-full">
-                    <p className="text-sm text-white">Video liked by 50 users</p>
+                    <p className="text-sm text-white">
+                      Video liked by 50 users
+                    </p>
                     <p className="text-xs text-gray-400">2 days ago</p>
                   </div>
                 </DropdownMenuItem>
@@ -179,7 +186,10 @@ const TopNavigation = () => {
                     </AvatarFallback>
                   </Avatar>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-72 bg-[#1a1a1a] border-[#333]">
+                <DropdownMenuContent
+                  align="end"
+                  className="w-72 bg-[#1a1a1a] border-[#333]"
+                >
                   <DropdownMenuLabel className="text-white">
                     <div className="flex space-x-4">
                       <Avatar>
@@ -223,7 +233,10 @@ const TopNavigation = () => {
                     </AvatarFallback>
                   </Avatar>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-72 bg-[#1a1a1a] border-[#333]">
+                <DropdownMenuContent
+                  align="end"
+                  className="w-72 bg-[#1a1a1a] border-[#333]"
+                >
                   <DropdownMenuLabel className="text-white">
                     <div className="flex space-x-4">
                       <Avatar>
