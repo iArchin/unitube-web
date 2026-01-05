@@ -789,7 +789,12 @@ export async function uploadVideo(
   try {
     const formData = new FormData();
     formData.append("file", data.file);
-    formData.append("poster", "");
+    // Append poster file if provided, otherwise append empty string
+    if (data.poster && data.poster instanceof File) {
+      formData.append("poster", data.poster);
+    } else {
+      formData.append("poster", "");
+    }
     // Build query parameters for other fields
     const queryParams = new URLSearchParams({
       title: data.title,

@@ -133,10 +133,14 @@ export default function CreatePage() {
     setUploadError(null);
     setUploadProgress(0);
     setUploadSuccess(false);
-    // Reset file input
+    // Reset file inputs
     const fileInput = document.getElementById("file") as HTMLInputElement;
     if (fileInput) {
       fileInput.value = "";
+    }
+    const posterInput = document.getElementById("poster") as HTMLInputElement;
+    if (posterInput) {
+      posterInput.value = "";
     }
   };
 
@@ -151,12 +155,18 @@ export default function CreatePage() {
     setShortUploadError(null);
     setShortUploadProgress(0);
     setShortUploadSuccess(false);
-    // Reset file input
+    // Reset file inputs
     const shortFileInput = document.getElementById(
       "short-file"
     ) as HTMLInputElement;
     if (shortFileInput) {
       shortFileInput.value = "";
+    }
+    const shortPosterInput = document.getElementById(
+      "short-poster"
+    ) as HTMLInputElement;
+    if (shortPosterInput) {
+      shortPosterInput.value = "";
     }
   };
 
@@ -194,6 +204,24 @@ export default function CreatePage() {
     }
   };
 
+  const handlePosterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        setUploadError("Please select a valid image file");
+        return;
+      }
+      // Validate file size (e.g., max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setUploadError("Thumbnail size must be less than 10MB");
+        return;
+      }
+      setFormData({ ...formData, poster: file });
+      setUploadError(null);
+    }
+  };
+
   const handleShortFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -208,6 +236,24 @@ export default function CreatePage() {
         return;
       }
       setShortFormData({ ...shortFormData, file });
+      setShortUploadError(null);
+    }
+  };
+
+  const handleShortPosterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        setShortUploadError("Please select a valid image file");
+        return;
+      }
+      // Validate file size (e.g., max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setShortUploadError("Thumbnail size must be less than 10MB");
+        return;
+      }
+      setShortFormData({ ...shortFormData, poster: file });
       setShortUploadError(null);
     }
   };
@@ -262,7 +308,7 @@ export default function CreatePage() {
         video_type: "long", // Always set to "long" as per requirements
         category_id: formData.category,
         file: formData.file,
-        poster: "",
+        poster: formData.poster || "",
       };
 
       const response = await uploadVideo(uploadData, token, (progress) => {
@@ -327,7 +373,7 @@ export default function CreatePage() {
         video_type: "short", // Set to "short" for shorts
         category_id: shortFormData.category,
         file: shortFormData.file,
-        poster: "",
+        poster: shortFormData.poster || "",
       };
 
       const response = await uploadVideo(uploadData, token, (progress) => {
@@ -513,6 +559,67 @@ export default function CreatePage() {
                         <p className="text-xs text-gray-400">
                           {(formData.file.size / 1024 / 1024).toFixed(2)} MB
                         </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor="poster"
+                    className="text-sm font-medium text-white"
+                  >
+                    Thumbnail (Optional)
+                  </label>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center w-full">
+                      <label
+                        htmlFor="poster"
+                        className="flex flex-col items-center justify-center w-full h-32 border-2 border-[#444] border-dashed rounded-lg cursor-pointer bg-[#2a2a2a] hover:bg-[#333] transition-colors"
+                      >
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <ImageIcon className="w-8 h-8 mb-2 text-gray-400" />
+                          <p className="mb-2 text-sm text-gray-400">
+                            <span className="font-semibold">
+                              Click to upload
+                            </span>{" "}
+                            or drag and drop
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            PNG, JPG, GIF, etc. (MAX. 10MB)
+                          </p>
+                        </div>
+                        <input
+                          id="poster"
+                          name="poster"
+                          type="file"
+                          accept="image/*"
+                          onChange={handlePosterChange}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                    {formData.poster && (
+                      <div className="p-3 rounded-md bg-[#2a2a2a] border border-[#444]">
+                        <div className="flex items-center gap-3">
+                          <div className="w-16 h-16 rounded overflow-hidden bg-[#333] flex-shrink-0">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={URL.createObjectURL(formData.poster)}
+                              alt="Thumbnail preview"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-white font-medium truncate">
+                              {formData.poster.name}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {(formData.poster.size / 1024 / 1024).toFixed(2)}{" "}
+                              MB
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -744,6 +851,71 @@ export default function CreatePage() {
                           {(shortFormData.file.size / 1024 / 1024).toFixed(2)}{" "}
                           MB
                         </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor="short-poster"
+                    className="text-sm font-medium text-white"
+                  >
+                    Thumbnail (Optional)
+                  </label>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-center w-full">
+                      <label
+                        htmlFor="short-poster"
+                        className="flex flex-col items-center justify-center w-full h-32 border-2 border-[#444] border-dashed rounded-lg cursor-pointer bg-[#2a2a2a] hover:bg-[#333] transition-colors"
+                      >
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          <ImageIcon className="w-8 h-8 mb-2 text-gray-400" />
+                          <p className="mb-2 text-sm text-gray-400">
+                            <span className="font-semibold">
+                              Click to upload
+                            </span>{" "}
+                            or drag and drop
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            PNG, JPG, GIF, etc. (MAX. 10MB)
+                          </p>
+                        </div>
+                        <input
+                          id="short-poster"
+                          name="poster"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleShortPosterChange}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                    {shortFormData.poster && (
+                      <div className="p-3 rounded-md bg-[#2a2a2a] border border-[#444]">
+                        <div className="flex items-center gap-3">
+                          <div className="w-16 h-16 rounded overflow-hidden bg-[#333] flex-shrink-0">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={URL.createObjectURL(shortFormData.poster)}
+                              alt="Thumbnail preview"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-white font-medium truncate">
+                              {shortFormData.poster.name}
+                            </p>
+                            <p className="text-xs text-gray-400">
+                              {(
+                                shortFormData.poster.size /
+                                1024 /
+                                1024
+                              ).toFixed(2)}{" "}
+                              MB
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
