@@ -12,7 +12,7 @@ import {
 import { Video } from "../../types/custom_types";
 import { RootState } from "@/store/store";
 
-const VideoGrid = () => {
+const VideoGrid = ({ categories }: { categories: string[] }) => {
   const router = useRouter();
   const token = useSelector((state: RootState) => state.auth.token);
   const [categoriesData, setCategoriesData] = useState<CategoryWithVideos[]>(
@@ -24,20 +24,15 @@ const VideoGrid = () => {
 
   useEffect(() => {
     const loadCategories = async () => {
-      if (!token) {
-        setError("Authentication required. Please log in.");
-        setLoading(false);
-        return;
-      }
-
       try {
         setLoading(true);
         setError(null);
 
         // Fetch categories and shorts in parallel
+        // Pass token if available, otherwise pass empty string (API will handle it)
         const [categoriesData, shortsData] = await Promise.all([
-          fetchCategoriesWithVideos(token, 1, 10),
-          fetchShortVideos(token, 1, 10),
+          fetchCategoriesWithVideos(token || "", 1, 10),
+          fetchShortVideos(token || "", 1, 10),
         ]);
 
         setCategoriesData(categoriesData);

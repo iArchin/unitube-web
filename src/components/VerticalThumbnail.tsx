@@ -6,14 +6,12 @@ import { Video } from "../../types/custom_types";
 import { formatCount, formatPublishedDate } from "@/lib/utils";
 
 const VerticalThumbnail = ({ video }: { video: Video }) => {
-  // Build URL with download_link as query parameter if available
-  const watchUrl = video.download_link
-    ? `/watch/${video.id}?url=${encodeURIComponent(video.download_link)}`
-    : `/watch/${video.id}`;
+  // Shorts videos should navigate to /shorts page with video ID
+  const shortsUrl = `/shorts?id=${video.id}`;
 
   return (
     <Link 
-      href={watchUrl} 
+      href={shortsUrl} 
       className="w-[180px] flex-shrink-0"
       draggable="false"
       onDragStart={(e) => e.preventDefault()}

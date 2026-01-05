@@ -610,11 +610,13 @@ export async function fetchCategoriesWithVideos(
   page: number = 1,
   size: number = 10
 ): Promise<CategoryWithVideos[]> {
-  if (!token?.trim()) {
-    throw new ValidationError("Authentication token is required");
-  }
-
   try {
+    const headers: Record<string, string> = {};
+    // Only add Authorization header if token is provided
+    if (token?.trim()) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
     const { data } = await axios.get<CategoriesVideosResponse>(
       `https://api.unitribe.app/ut/api/categories/videos`,
       {
@@ -622,9 +624,7 @@ export async function fetchCategoriesWithVideos(
           page,
           size,
         },
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers,
         timeout: 10000,
       }
     );
@@ -718,11 +718,13 @@ export async function fetchShortVideos(
   page: number = 1,
   size: number = 10
 ): Promise<Video[]> {
-  if (!token?.trim()) {
-    throw new ValidationError("Authentication token is required");
-  }
-
   try {
+    const headers: Record<string, string> = {};
+    // Only add Authorization header if token is provided
+    if (token?.trim()) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
     const { data } = await axios.get<ShortVideoResponse>(
       `https://api.unitribe.app/ut/api/videos/short`,
       {
@@ -730,9 +732,7 @@ export async function fetchShortVideos(
           page,
           size,
         },
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers,
         timeout: 10000,
       }
     );

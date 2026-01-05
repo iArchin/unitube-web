@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
+import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { 
   ChevronUp, 
@@ -59,6 +60,7 @@ const defaultComments = [
 
 const ShortsPage = () => {
   const token = useSelector((state: RootState) => state.auth.token);
+  const searchParams = useSearchParams();
   const [shorts, setShorts] = useState<Video[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -72,28 +74,34 @@ const ShortsPage = () => {
 
   useEffect(() => {
     const loadShorts = async () => {
-      if (!token) {
-        setError("Authentication required. Please log in.");
-        setLoading(false);
-        return;
-      }
-
       try {
         setLoading(true);
         setError(null);
-        const shortsData = await fetchShortVideos(token, 1, 50);
-        setShorts(
-          shortsData.filter(
-            (video) =>
-              video !== null &&
-              video !== undefined &&
-              video.id &&
-              video.title &&
-              video.thumbnail &&
-              video.download_link !== null &&
-              video.download_link !== undefined
-          )
+        // Pass token if available, otherwise pass empty string (API will handle it)
+        const shortsData = await fetchShortVideos(token || "", 1, 50);
+        const filteredShorts = shortsData.filter(
+          (video) =>
+            video !== null &&
+            video !== undefined &&
+            video.id &&
+            video.title &&
+            video.thumbnail &&
+            video.download_link !== null &&
+            video.download_link !== undefined
         );
+        setShorts(filteredShorts);
+
+        // If a video ID is provided in the URL, find its index and set it as current
+        const videoIdFromUrl = searchParams.get("id");
+        if (videoIdFromUrl && filteredShorts.length > 0) {
+          const videoIndex = filteredShorts.findIndex(
+            (video) => video.id === videoIdFromUrl
+          );
+          if (videoIndex !== -1) {
+            setCurrentIndex(videoIndex);
+            setPlayingVideos(new Set([videoIndex]));
+          }
+        }
       } catch (err) {
         console.error("Failed to fetch shorts:", err);
         setError(err instanceof Error ? err.message : "Failed to load shorts");
@@ -103,7 +111,7 @@ const ShortsPage = () => {
     };
 
     loadShorts();
-  }, [token]);
+  }, [token, searchParams]);
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -152,13 +160,16 @@ const ShortsPage = () => {
 
   // Scroll to current video when index changes
   useEffect(() => {
-    if (videoRefs.current[currentIndex]) {
-      videoRefs.current[currentIndex]?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
+    if (videoRefs.current[currentIndex] && shorts.length > 0) {
+      // Use setTimeout to ensure the DOM is ready
+      setTimeout(() => {
+        videoRefs.current[currentIndex]?.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest",
+        });
+      }, 100);
     }
-  }, [currentIndex]);
+  }, [currentIndex, shorts.length]);
 
   const navigateUp = () => {
     if (currentIndex > 0) {
