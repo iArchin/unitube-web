@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useSelector } from "react-redux";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,6 +13,19 @@ import { Video } from "../../../../../types/custom_types";
 import { Button } from "@/components/ui/button";
 import { fetchVideoById } from "@/lib/api";
 import { RootState } from "@/store/store";
+
+// Comment type
+interface Comment {
+  id: number;
+  author: string;
+  avatar: string;
+  text: string;
+  likes: number;
+  dislikes: number;
+  timeAgo: string;
+  userLiked?: boolean;
+  userDisliked?: boolean;
+}
 
 // Dynamically import react-player to avoid SSR issues
 // Use react-player (not youtube-specific) to support file URLs
@@ -98,15 +111,25 @@ const VideoDetails = () => {
   const { id } = useParams();
   const searchParams = useSearchParams();
   const token = useSelector((state: RootState) => state.auth.token);
+  const user = useSelector((state: RootState) => state.auth.user);
   const [isMounted, setIsMounted] = useState(false);
   const [substringCount, setSubstringCount] = useState<undefined | number>(200);
   const [newComment, setNewComment] = useState("");
   const [videoDetails, setVideoDetails] = useState<Video | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [likes, setLikes] = useState(0);
+  const [dislikes, setDislikes] = useState(0);
+  const [userLiked, setUserLiked] = useState(false);
+  const [userDisliked, setUserDisliked] = useState(false);
+  const [comments, setComments] = useState<Comment[]>(defaultComments);
+  const [subscriberCount] = useState(() => Math.floor(Math.random() * 1000000));
   
-  // Get download_link from URL query parameter if available
+  // Get data from URL query parameters if available
   const urlDownloadLink = searchParams.get("url");
+  const urlTitle = searchParams.get("title");
+  const urlDescription = searchParams.get("description");
+  const urlChannel = searchParams.get("channel");
 
   useEffect(() => {
     setIsMounted(true);
@@ -120,55 +143,62 @@ const VideoDetails = () => {
         return;
       }
 
-      // If download_link is provided in URL, use it immediately
-      if (urlDownloadLink) {
-        try {
-          setLoading(true);
-          setError(null);
-          // Try to fetch video details, but use URL download_link if available
-          if (token) {
-            try {
-              const video = await fetchVideoById(id as string, token);
-              // Override download_link with the one from URL if it exists
-              setVideoDetails({
-                ...video,
-                download_link: urlDownloadLink,
-              });
-            } catch (err) {
-              // If fetch fails, create a minimal video object with the download_link
-              console.warn("Failed to fetch video details, using URL download_link:", err);
-              const defaultVideo = getDefaultVideo(id);
-              setVideoDetails({
-                ...defaultVideo,
-                download_link: urlDownloadLink,
-              });
-            }
-          } else {
-            // No token, use default video with download_link from URL
-            const defaultVideo = getDefaultVideo(id);
+      // If URL parameters are provided, use them immediately to show data fast
+      if (urlDownloadLink || urlTitle || urlDescription || urlChannel) {
+        setError(null);
+        
+        // Create initial video object from URL parameters
+        const initialVideo: Video = {
+          id: id as string,
+          title: urlTitle || "Loading...",
+          description: urlDescription || "",
+          thumbnail: "",
+          viewCount: "0",
+          channel: {
+            channelId: "",
+            channelTitle: urlChannel || "Loading...",
+            channelImage: "",
+          },
+          publishedDate: new Date().toISOString(),
+          download_link: urlDownloadLink || null,
+        };
+
+        // Set initial data immediately for fast display (no loading state)
+        setVideoDetails(initialVideo);
+        setLikes(Math.floor(Math.random() * 50000));
+        setLoading(false); // Show content immediately
+
+        // Then try to fetch full video details from API if token is available
+        // This will fill in missing data like thumbnail, viewCount, etc.
+        if (token) {
+          try {
+            const video = await fetchVideoById(id as string, token);
+            // Merge API data with URL parameters (URL params take precedence)
             setVideoDetails({
-              ...defaultVideo,
-              download_link: urlDownloadLink,
+              ...video,
+              download_link: urlDownloadLink || video.download_link,
+              // URL params take precedence, but use API data if URL params not provided
+              title: urlTitle || video.title,
+              description: urlDescription || video.description,
+              channel: {
+                ...video.channel,
+                channelTitle: urlChannel || video.channel.channelTitle,
+              },
             });
+          } catch (err) {
+            // If fetch fails, keep the URL parameter data we already set
+            console.warn("Failed to fetch video details, using URL parameters:", err);
+            // initialVideo is already set, so we keep it
           }
-        } catch (err) {
-          console.error("Failed to load video:", err);
-          setError(err instanceof Error ? err.message : "Failed to load video");
-          const defaultVideo = getDefaultVideo(id);
-          setVideoDetails({
-            ...defaultVideo,
-            download_link: urlDownloadLink || null,
-          });
-        } finally {
-          setLoading(false);
         }
         return;
       }
 
-      // No download_link in URL, fetch from API
+      // No URL parameters, fetch from API
       if (!token) {
         // Fallback to default video if no token
         setVideoDetails(getDefaultVideo(id));
+        setLikes(Math.floor(Math.random() * 50000));
         setLoading(false);
         return;
       }
@@ -178,24 +208,145 @@ const VideoDetails = () => {
         setError(null);
         const video = await fetchVideoById(id as string, token);
         setVideoDetails(video);
+        // Initialize likes/dislikes
+        setLikes(Math.floor(Math.random() * 50000));
       } catch (err) {
         console.error("Failed to fetch video:", err);
         setError(err instanceof Error ? err.message : "Failed to load video");
         // Fallback to default video on error
         setVideoDetails(getDefaultVideo(id));
+        setLikes(Math.floor(Math.random() * 50000));
       } finally {
         setLoading(false);
       }
     };
 
     loadVideo();
-  }, [id, token, urlDownloadLink]);
+  }, [id, token, urlDownloadLink, urlTitle, urlDescription, urlChannel]);
+
+  // Handle like button
+  const handleLike = () => {
+    if (userDisliked) {
+      setDislikes((prev) => prev - 1);
+      setUserDisliked(false);
+    }
+    if (userLiked) {
+      setLikes((prev) => prev - 1);
+      setUserLiked(false);
+    } else {
+      setLikes((prev) => prev + 1);
+      setUserLiked(true);
+    }
+  };
+
+  // Handle dislike button
+  const handleDislike = () => {
+    if (userLiked) {
+      setLikes((prev) => prev - 1);
+      setUserLiked(false);
+    }
+    if (userDisliked) {
+      setDislikes((prev) => prev - 1);
+      setUserDisliked(false);
+    } else {
+      setDislikes((prev) => prev + 1);
+      setUserDisliked(true);
+    }
+  };
+
+  // Handle comment submission
+  const handleCommentSubmit = () => {
+    if (!newComment.trim()) return;
+
+    const authorName = user?.name || "Anonymous";
+    const authorInitials = authorName
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "AN";
+
+    const newCommentObj: Comment = {
+      id: Date.now(),
+      author: authorName,
+      avatar: authorInitials,
+      text: newComment.trim(),
+      likes: 0,
+      dislikes: 0,
+      timeAgo: "just now",
+      userLiked: false,
+      userDisliked: false,
+    };
+
+    setComments((prev) => [newCommentObj, ...prev]);
+    setNewComment("");
+  };
+
+  // Handle comment like/dislike
+  const handleCommentLike = (commentId: number) => {
+    setComments((prev) =>
+      prev.map((comment) => {
+        if (comment.id === commentId) {
+          if (comment.userDisliked) {
+            return {
+              ...comment,
+              dislikes: comment.dislikes - 1,
+              userDisliked: false,
+              likes: comment.userLiked ? comment.likes - 1 : comment.likes + 1,
+              userLiked: !comment.userLiked,
+            };
+          }
+          return {
+            ...comment,
+            likes: comment.userLiked ? comment.likes - 1 : comment.likes + 1,
+            userLiked: !comment.userLiked,
+          };
+        }
+        return comment;
+      })
+    );
+  };
+
+  const handleCommentDislike = (commentId: number) => {
+    setComments((prev) =>
+      prev.map((comment) => {
+        if (comment.id === commentId) {
+          if (comment.userLiked) {
+            return {
+              ...comment,
+              likes: comment.likes - 1,
+              userLiked: false,
+              dislikes: comment.userDisliked
+                ? comment.dislikes - 1
+                : comment.dislikes + 1,
+              userDisliked: !comment.userDisliked,
+            };
+          }
+          return {
+            ...comment,
+            dislikes: comment.userDisliked
+              ? comment.dislikes - 1
+              : comment.dislikes + 1,
+            userDisliked: !comment.userDisliked,
+          };
+        }
+        return comment;
+      })
+    );
+  };
 
   // Use default video data if not loaded yet
   const currentVideo = videoDetails || getDefaultVideo(id);
 
-  // Generate related videos using mock data
-  const relatedVideos = generateMockVideos(8, "trending");
+  // Memoize formatted published date to prevent recalculation on re-renders
+  const formattedPublishedDate = useMemo(() => {
+    return formatPublishedDate(
+      videoDetails?.publishedDate || currentVideo.publishedDate
+    );
+  }, [videoDetails?.publishedDate, currentVideo.publishedDate]);
+
+  // Generate related videos using mock data - memoize to prevent regeneration on re-renders
+  const relatedVideos = useMemo(() => generateMockVideos(8, "trending"), []);
 
   // Determine video URL - prioritize download_link from URL query param, then from currentVideo
   // If no download_link, fallback to YouTube (though this shouldn't happen for uploaded videos)
@@ -253,39 +404,61 @@ const VideoDetails = () => {
             {/* Video Info */}
             <div className="mb-4">
               <h3 className="text-xl md:text-2xl font-semibold text-white mb-3">
-                {currentVideo.title}
+                {videoDetails?.title || currentVideo.title}
               </h3>
 
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
                 <div className="flex items-center space-x-3">
                   <Avatar>
                     <AvatarImage
-                      src={currentVideo.channel.channelImage}
-                      alt={currentVideo.channel.channelTitle}
+                      src={videoDetails?.channel.channelImage || currentVideo.channel.channelImage}
+                      alt={videoDetails?.channel.channelTitle || currentVideo.channel.channelTitle}
                     />
-                    <AvatarFallback>VD</AvatarFallback>
+                    <AvatarFallback>
+                      {(videoDetails?.channel.channelTitle || currentVideo.channel.channelTitle)
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()
+                        .slice(0, 2)}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
                     <h4 className="text-white text-sm font-medium">
-                      {currentVideo.channel.channelTitle}
+                      {videoDetails?.channel.channelTitle || currentVideo.channel.channelTitle}
                     </h4>
                     <p className="text-gray-400 text-xs">
-                      {formatCount(Math.floor(Math.random() * 1000000))}{" "}
+                      {formatCount(subscriberCount)}{" "}
                       subscribers
                     </p>
                   </div>
                 </div>
 
                 <div className="flex space-x-4 text-sm items-center bg-[#1a1a1a] text-white px-3 md:px-5 py-2 rounded-3xl">
-                  <button className="flex items-center space-x-2 hover:text-blue-500 transition-colors">
+                  <button
+                    onClick={handleLike}
+                    className={`flex items-center space-x-2 transition-colors ${
+                      userLiked
+                        ? "text-blue-500"
+                        : "hover:text-blue-500"
+                    }`}
+                  >
                     <ThumbsUp className="w-5 h-5" />
-                    <span className="text-sm">
-                      {formatCount(Math.floor(Math.random() * 50000))}
-                    </span>
+                    <span className="text-sm">{formatCount(likes)}</span>
                   </button>
                   <span className="text-gray-600">|</span>
-                  <button className="flex items-center hover:text-red-500 transition-colors">
+                  <button
+                    onClick={handleDislike}
+                    className={`flex items-center transition-colors ${
+                      userDisliked
+                        ? "text-red-500"
+                        : "hover:text-red-500"
+                    }`}
+                  >
                     <ThumbsDown className="w-5 h-5" />
+                    {dislikes > 0 && (
+                      <span className="text-sm ml-1">{formatCount(dislikes)}</span>
+                    )}
                   </button>
                 </div>
               </div>
@@ -295,19 +468,21 @@ const VideoDetails = () => {
             <div className="p-4 bg-[#1a1a1a] text-white rounded-lg mb-6">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-300">
-                  {formatCount(+currentVideo.viewCount)} views •{" "}
-                  {formatPublishedDate(currentVideo.publishedDate)}
+                  {formatCount(+(videoDetails?.viewCount || currentVideo.viewCount))} views •{" "}
+                  {formattedPublishedDate}
                 </span>
               </div>
               <p className="leading-6 text-sm text-gray-300">
-                {currentVideo.description.substring(
+                {(videoDetails?.description || currentVideo.description).substring(
                   0,
-                  substringCount || currentVideo.description.length
+                  substringCount ||
+                    (videoDetails?.description || currentVideo.description).length
                 )}
                 {substringCount &&
-                  substringCount < currentVideo.description.length &&
+                  substringCount <
+                    (videoDetails?.description || currentVideo.description).length &&
                   "..."}
-                {currentVideo.description.length > 200 && (
+                {(videoDetails?.description || currentVideo.description).length > 200 && (
                   <button
                     onClick={() =>
                       substringCount === 200
@@ -325,7 +500,7 @@ const VideoDetails = () => {
             {/* Comments Section */}
             <div className="mt-6">
               <h4 className="text-lg font-semibold mb-6 text-white">
-                {defaultComments.length} Comments
+                {comments.length} Comment{comments.length !== 1 ? "s" : ""}
               </h4>
 
               {/* Add Comment Input */}
@@ -333,7 +508,12 @@ const VideoDetails = () => {
                 <div className="flex space-x-3">
                   <Avatar className="w-10 h-10 flex-shrink-0">
                     <AvatarFallback className="bg-blue-500 text-white">
-                      AB
+                      {user?.name
+                        ?.split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .toUpperCase()
+                        .slice(0, 2) || "AN"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
@@ -357,11 +537,7 @@ const VideoDetails = () => {
                       </Button>
                       <Button
                         size="sm"
-                        onClick={() => {
-                          // TODO: Implement comment submission
-                          console.log("Comment submitted:", newComment);
-                          setNewComment("");
-                        }}
+                        onClick={handleCommentSubmit}
                         disabled={!newComment.trim()}
                         className="bg-blue-600 hover:bg-blue-700 text-white"
                       >
@@ -374,7 +550,7 @@ const VideoDetails = () => {
 
               {/* Comments List */}
               <div className="space-y-6">
-                {defaultComments.map((comment) => (
+                {comments.map((comment) => (
                   <div key={comment.id} className="flex space-x-3">
                     <Avatar className="w-10 h-10 flex-shrink-0">
                       <AvatarFallback className="bg-gray-600 text-white">
@@ -394,14 +570,28 @@ const VideoDetails = () => {
                         {comment.text}
                       </p>
                       <div className="flex items-center space-x-4">
-                        <button className="flex items-center space-x-1 text-xs hover:text-blue-400 transition-colors text-gray-400">
+                        <button
+                          onClick={() => handleCommentLike(comment.id)}
+                          className={`flex items-center space-x-1 text-xs transition-colors ${
+                            comment.userLiked
+                              ? "text-blue-400"
+                              : "text-gray-400 hover:text-blue-400"
+                          }`}
+                        >
                           <ThumbsUp className="w-4 h-4" />
                           <span>{formatCount(comment.likes)}</span>
                         </button>
-                        <button className="flex items-center space-x-1 text-xs hover:text-red-400 transition-colors text-gray-400">
+                        <button
+                          onClick={() => handleCommentDislike(comment.id)}
+                          className={`flex items-center space-x-1 text-xs transition-colors ${
+                            comment.userDisliked
+                              ? "text-red-400"
+                              : "text-gray-400 hover:text-red-400"
+                          }`}
+                        >
                           <ThumbsDown className="w-4 h-4" />
                           {comment.dislikes > 0 && (
-                            <span>{comment.dislikes}</span>
+                            <span>{formatCount(comment.dislikes)}</span>
                           )}
                         </button>
                         <button className="text-xs text-gray-400 hover:text-white transition-colors">

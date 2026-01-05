@@ -7,10 +7,22 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatCount, formatPublishedDate } from "@/lib/utils";
 
 const HorizontalThumbnail = ({ video }: { video: Video }) => {
-  // Build URL with download_link as query parameter if available
-  const watchUrl = video.download_link
-    ? `/watch/${video.id}?url=${encodeURIComponent(video.download_link)}`
-    : `/watch/${video.id}`;
+  // Build URL with download_link, title, and description as query parameters
+  const params = new URLSearchParams();
+  if (video.download_link) {
+    params.append("url", video.download_link);
+  }
+  if (video.title) {
+    params.append("title", video.title);
+  }
+  if (video.description) {
+    params.append("description", video.description);
+  }
+  if (video.channel.channelTitle) {
+    params.append("channel", video.channel.channelTitle);
+  }
+  
+  const watchUrl = `/watch/${video.id}${params.toString() ? `?${params.toString()}` : ""}`;
 
   return (
     <Link 

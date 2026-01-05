@@ -192,6 +192,10 @@ export async function fetchSearchQuery(
             channelTitle: "User Channel", // API doesn't provide channel name
             channelImage: `https://via.placeholder.com/40x40/6366f1/ffffff?text=U${video.user_id}`,
           },
+          user: {
+            name: video.user.name,
+            email: video.user.email,
+          },
           publishedDate: getRandomDate(),
           download_link: video.download_link,
         } as Video;
@@ -217,6 +221,7 @@ export async function fetchSearchQuery(
 export interface SearchVideosResponse {
   current_page: number;
   data: Array<{
+    user: any;
     id: number;
     video_type: string;
     category_id: number;
@@ -299,6 +304,7 @@ export interface CategoryVideoResponse {
   description: string;
   slug: string;
   videos: Array<{
+    user: any;
     id: number;
     title: string;
     description: string;
@@ -408,7 +414,7 @@ export async function fetchVideoById(
       viewCount: getRandomViewCount(),
       channel: {
         channelId: video.user_id?.toString() || "0",
-        channelTitle: "User Channel",
+        channelTitle: video.user.name || "User Channel",
         channelImage: `https://via.placeholder.com/40x40/6366f1/ffffff?text=U${
           video.user_id || "0"
         }`,
@@ -494,7 +500,7 @@ export async function fetchCategoriesWithVideos(
             viewCount: getRandomViewCount(),
             channel: {
               channelId: video.user_id.toString(),
-              channelTitle: "User Channel", // API doesn't provide channel name
+              channelTitle: video.user.name || "User Channel", // API doesn't provide channel name
               channelImage: `https://via.placeholder.com/40x40/6366f1/ffffff?text=U${video.user_id}`, // Placeholder
             },
             publishedDate: getRandomDate(),
@@ -510,6 +516,7 @@ export async function fetchCategoriesWithVideos(
 export interface ShortVideoResponse {
   current_page: number;
   data: Array<{
+    user: any;
     id: number;
     video_type: string;
     category_id: number;
@@ -614,7 +621,7 @@ export async function fetchShortVideos(
           viewCount: getRandomViewCount(),
           channel: {
             channelId: video.user_id.toString(),
-            channelTitle: "User Channel", // API doesn't provide channel name
+            channelTitle: video.user.name || "User Channel", // API doesn't provide channel name
             channelImage: `https://via.placeholder.com/40x40/6366f1/ffffff?text=U${video.user_id}`, // Placeholder
           },
           publishedDate: getRandomDate(),
@@ -638,6 +645,7 @@ export async function fetchShortVideos(
 
 export interface CategoryVideosResponse {
   data: Array<{
+    user: any;
     id: number;
     video_type: string;
     category_id: number;
@@ -737,7 +745,7 @@ export async function fetchVideosByCategoryId(
           viewCount: getRandomViewCount(),
           channel: {
             channelId: video.user_id.toString(),
-            channelTitle: "User Channel", // API doesn't provide channel name
+            channelTitle: video.user.name || "User Channel", // API doesn't provide channel name
             channelImage: `https://via.placeholder.com/40x40/6366f1/ffffff?text=U${video.user_id}`, // Placeholder
           },
           publishedDate: getRandomDate(),

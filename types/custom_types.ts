@@ -9,6 +9,10 @@ export type Video = {
     channelTitle: string;
     channelImage: string;
   };
+  user?: {
+    name: string;
+    email: string;
+  };
   publishedDate: string;
   download_link?: string | null;
 };
