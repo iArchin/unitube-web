@@ -14,7 +14,12 @@ interface VideoRowProps {
   vertical?: boolean;
 }
 
-const VideoRow = ({ title, videos, onViewAll, vertical = false }: VideoRowProps) => {
+const VideoRow = ({
+  title,
+  videos,
+  onViewAll,
+  vertical = false,
+}: VideoRowProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftChevron, setShowLeftChevron] = useState(false);
   const [showRightChevron, setShowRightChevron] = useState(true);
@@ -30,7 +35,8 @@ const VideoRow = ({ title, videos, onViewAll, vertical = false }: VideoRowProps)
 
   const checkScrollPosition = () => {
     if (scrollContainerRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollContainerRef.current;
+      const { scrollLeft, scrollWidth, clientWidth } =
+        scrollContainerRef.current;
       setShowLeftChevron(scrollLeft > 0);
       setShowRightChevron(scrollLeft < scrollWidth - clientWidth - 1);
     }
@@ -58,15 +64,19 @@ const VideoRow = ({ title, videos, onViewAll, vertical = false }: VideoRowProps)
   const handleMouseDown = (e: React.MouseEvent) => {
     // Don't interfere with button clicks
     if ((e.target as HTMLElement).closest("button")) return;
-    
+
     // Prevent default drag behavior on images and links
     const target = e.target as HTMLElement;
-    if (target.tagName === "IMG" || target.closest("a") || target.closest("img")) {
+    if (
+      target.tagName === "IMG" ||
+      target.closest("a") ||
+      target.closest("img")
+    ) {
       e.preventDefault();
     }
-    
+
     if (!scrollContainerRef.current) return;
-    
+
     const container = scrollContainerRef.current;
     const rect = container.getBoundingClientRect();
     startXRef.current = e.clientX - rect.left;
@@ -76,25 +86,25 @@ const VideoRow = ({ title, videos, onViewAll, vertical = false }: VideoRowProps)
 
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (!isDraggingRef.current || !scrollContainerRef.current) return;
-      
+
       e.preventDefault(); // Prevent default drag behavior
-      
+
       // Cancel any pending animation frame
       if (rafIdRef.current !== null) {
         cancelAnimationFrame(rafIdRef.current);
       }
-      
+
       // Capture clientX before RAF to avoid stale values
       const clientX = e.clientX;
-      
+
       rafIdRef.current = requestAnimationFrame(() => {
         if (!isDraggingRef.current || !scrollContainerRef.current) return;
-        
+
         const container = scrollContainerRef.current;
         const rect = container.getBoundingClientRect();
         const currentX = clientX - rect.left;
-        const walk = (currentX - startXRef.current); // Direct scroll for smoother feel
-        
+        const walk = currentX - startXRef.current; // Direct scroll for smoother feel
+
         // Only start dragging if mouse moved more than 3px (prevents accidental drag on click)
         if (Math.abs(walk) > 3) {
           hasMovedRef.current = true;
@@ -111,7 +121,7 @@ const VideoRow = ({ title, videos, onViewAll, vertical = false }: VideoRowProps)
         cancelAnimationFrame(rafIdRef.current);
         rafIdRef.current = null;
       }
-      
+
       // If we dragged, set flag to prevent click events on links
       if (hasMovedRef.current) {
         preventClickRef.current = true;
@@ -123,14 +133,14 @@ const VideoRow = ({ title, videos, onViewAll, vertical = false }: VideoRowProps)
           preventClickRef.current = false;
         }, 300);
       }
-      
+
       isDraggingRef.current = false;
       hasMovedRef.current = false;
       if (scrollContainerRef.current) {
         scrollContainerRef.current.style.cursor = "grab";
         scrollContainerRef.current.style.userSelect = "";
       }
-      
+
       if (mouseMoveHandlerRef.current) {
         document.removeEventListener("mousemove", mouseMoveHandlerRef.current);
         mouseMoveHandlerRef.current = null;
@@ -149,13 +159,13 @@ const VideoRow = ({ title, videos, onViewAll, vertical = false }: VideoRowProps)
 
   const handleMouseLeave = () => {
     if (!scrollContainerRef.current) return;
-    
+
     // Cancel any pending animation frame
     if (rafIdRef.current !== null) {
       cancelAnimationFrame(rafIdRef.current);
       rafIdRef.current = null;
     }
-    
+
     // If we were dragging, prevent clicks
     if (hasMovedRef.current) {
       preventClickRef.current = true;
@@ -166,12 +176,12 @@ const VideoRow = ({ title, videos, onViewAll, vertical = false }: VideoRowProps)
         preventClickRef.current = false;
       }, 300);
     }
-    
+
     isDraggingRef.current = false;
     hasMovedRef.current = false;
     scrollContainerRef.current.style.cursor = "grab";
     scrollContainerRef.current.style.userSelect = "";
-    
+
     // Clean up event listeners if mouse leaves while dragging
     if (mouseMoveHandlerRef.current) {
       document.removeEventListener("mousemove", mouseMoveHandlerRef.current);
@@ -239,7 +249,9 @@ const VideoRow = ({ title, videos, onViewAll, vertical = false }: VideoRowProps)
     <div className="mb-8">
       {/* Row Header */}
       <div className="flex items-center justify-between mb-4 px-2">
-        <h2 className="text-xl font-bold text-foreground">{title}</h2>
+        <h2 className="text-xl font-bold text-foreground">
+          {title?.toUpperCase()}
+        </h2>
         <Button
           variant="ghost"
           className="text-sm font-medium text-muted-foreground hover:text-foreground flex items-center gap-1"
@@ -261,26 +273,26 @@ const VideoRow = ({ title, videos, onViewAll, vertical = false }: VideoRowProps)
           onDragStart={(e) => e.preventDefault()}
         >
           <div className="flex gap-4">
-            {videos.map((video) => (
+            {videos.map((video) =>
               vertical ? (
                 <VerticalThumbnail key={video.id} video={video} />
               ) : (
                 <HorizontalThumbnail key={video.id} video={video} />
               )
-            ))}
+            )}
           </div>
         </div>
-        
+
         {/* Fade effect on the left side */}
         {showLeftChevron && (
           <div className="absolute left-2 top-0 bottom-4 w-32 pointer-events-none z-10 bg-gradient-to-r from-[#111111] via-[#111111]/60 to-transparent dark:from-[#111111] dark:via-[#111111]/60" />
         )}
-        
+
         {/* Fade effect on the right side */}
         {showRightChevron && (
           <div className="absolute right-2 top-0 bottom-4 w-32 pointer-events-none z-10 bg-gradient-to-l from-[#111111] via-[#111111]/60 to-transparent dark:from-[#111111] dark:via-[#111111]/60" />
         )}
-        
+
         {/* Left Chevron Button */}
         {showLeftChevron && (
           <button
@@ -291,7 +303,7 @@ const VideoRow = ({ title, videos, onViewAll, vertical = false }: VideoRowProps)
             <ChevronLeft className="w-6 h-6 text-foreground" />
           </button>
         )}
-        
+
         {/* Right Chevron Button */}
         {showRightChevron && (
           <button

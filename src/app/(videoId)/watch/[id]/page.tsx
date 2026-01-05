@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useSelector } from "react-redux";
@@ -109,7 +109,6 @@ const defaultComments = [
 
 const VideoDetails = () => {
   const { id } = useParams();
-  const searchParams = useSearchParams();
   const token = useSelector((state: RootState) => state.auth.token);
   const user = useSelector((state: RootState) => state.auth.user);
   const [isMounted, setIsMounted] = useState(false);
@@ -124,12 +123,6 @@ const VideoDetails = () => {
   const [userDisliked, setUserDisliked] = useState(false);
   const [comments, setComments] = useState<Comment[]>(defaultComments);
   const [subscriberCount] = useState(() => Math.floor(Math.random() * 1000000));
-  
-  // Get data from URL query parameters if available
-  const urlDownloadLink = searchParams.get("url");
-  const urlTitle = searchParams.get("title");
-  const urlDescription = searchParams.get("description");
-  const urlChannel = searchParams.get("channel");
 
   useEffect(() => {
     setIsMounted(true);
@@ -138,67 +131,7 @@ const VideoDetails = () => {
   useEffect(() => {
     const loadVideo = async () => {
       if (!id) {
-        setVideoDetails(getDefaultVideo(id));
-        setLoading(false);
-        return;
-      }
-
-      // If URL parameters are provided, use them immediately to show data fast
-      if (urlDownloadLink || urlTitle || urlDescription || urlChannel) {
-        setError(null);
-        
-        // Create initial video object from URL parameters
-        const initialVideo: Video = {
-          id: id as string,
-          title: urlTitle || "Loading...",
-          description: urlDescription || "",
-          thumbnail: "",
-          viewCount: "0",
-          channel: {
-            channelId: "",
-            channelTitle: urlChannel || "Loading...",
-            channelImage: "",
-          },
-          publishedDate: new Date().toISOString(),
-          download_link: urlDownloadLink || null,
-        };
-
-        // Set initial data immediately for fast display (no loading state)
-        setVideoDetails(initialVideo);
-        setLikes(Math.floor(Math.random() * 50000));
-        setLoading(false); // Show content immediately
-
-        // Then try to fetch full video details from API if token is available
-        // This will fill in missing data like thumbnail, viewCount, etc.
-        if (token) {
-          try {
-            const video = await fetchVideoById(id as string, token);
-            // Merge API data with URL parameters (URL params take precedence)
-            setVideoDetails({
-              ...video,
-              download_link: urlDownloadLink || video.download_link,
-              // URL params take precedence, but use API data if URL params not provided
-              title: urlTitle || video.title,
-              description: urlDescription || video.description,
-              channel: {
-                ...video.channel,
-                channelTitle: urlChannel || video.channel.channelTitle,
-              },
-            });
-          } catch (err) {
-            // If fetch fails, keep the URL parameter data we already set
-            console.warn("Failed to fetch video details, using URL parameters:", err);
-            // initialVideo is already set, so we keep it
-          }
-        }
-        return;
-      }
-
-      // No URL parameters, fetch from API
-      if (!token) {
-        // Fallback to default video if no token
-        setVideoDetails(getDefaultVideo(id));
-        setLikes(Math.floor(Math.random() * 50000));
+        setError("Video ID is required");
         setLoading(false);
         return;
       }
@@ -206,7 +139,8 @@ const VideoDetails = () => {
       try {
         setLoading(true);
         setError(null);
-        const video = await fetchVideoById(id as string, token);
+        // Token is optional for this endpoint
+        const video = await fetchVideoById(id as string, token || undefined);
         setVideoDetails(video);
         // Initialize likes/dislikes
         setLikes(Math.floor(Math.random() * 50000));
@@ -222,7 +156,7 @@ const VideoDetails = () => {
     };
 
     loadVideo();
-  }, [id, token, urlDownloadLink, urlTitle, urlDescription, urlChannel]);
+  }, [id, token]);
 
   // Handle like button
   const handleLike = () => {
@@ -259,12 +193,13 @@ const VideoDetails = () => {
     if (!newComment.trim()) return;
 
     const authorName = user?.name || "Anonymous";
-    const authorInitials = authorName
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2) || "AN";
+    const authorInitials =
+      authorName
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2) || "AN";
 
     const newCommentObj: Comment = {
       id: Date.now(),
@@ -348,12 +283,14 @@ const VideoDetails = () => {
   // Generate related videos using mock data - memoize to prevent regeneration on re-renders
   const relatedVideos = useMemo(() => generateMockVideos(8, "trending"), []);
 
-  // Determine video URL - prioritize download_link from URL query param, then from currentVideo
-  // If no download_link, fallback to YouTube (though this shouldn't happen for uploaded videos)
-  const videoUrl = urlDownloadLink || currentVideo.download_link || `https://www.youtube.com/watch?v=dQw4w9WgXcQ`;
-  
-  // Check if we have a valid video URL to play (either from URL param or from video details)
-  const hasVideoUrl = !!urlDownloadLink || !!currentVideo.download_link;
+  // Determine video URL - prioritize download_link from:
+  // 1. videoDetails (from API fetch)
+  // 2. currentVideo (fallback/default)
+  const videoUrl =
+    videoDetails?.download_link || currentVideo.download_link || undefined;
+
+  // Check if we have a valid video URL to play
+  const hasVideoUrl = !!videoUrl;
 
   return (
     <div className="min-h-screen bg-[#111111] pt-16 md:pt-20">
@@ -364,7 +301,7 @@ const VideoDetails = () => {
             {/* Video Player */}
             <div className="w-full mb-4">
               <div className="relative aspect-video rounded-xl overflow-hidden bg-black">
-                {loading && !urlDownloadLink ? (
+                {loading ? (
                   <div className="w-full h-full flex items-center justify-center">
                     <p className="text-white">Loading video...</p>
                   </div>
@@ -411,11 +348,20 @@ const VideoDetails = () => {
                 <div className="flex items-center space-x-3">
                   <Avatar>
                     <AvatarImage
-                      src={videoDetails?.channel.channelImage || currentVideo.channel.channelImage}
-                      alt={videoDetails?.channel.channelTitle || currentVideo.channel.channelTitle}
+                      src={
+                        videoDetails?.channel.channelImage ||
+                        currentVideo.channel.channelImage
+                      }
+                      alt={
+                        videoDetails?.channel.channelTitle ||
+                        currentVideo.channel.channelTitle
+                      }
                     />
                     <AvatarFallback>
-                      {(videoDetails?.channel.channelTitle || currentVideo.channel.channelTitle)
+                      {(
+                        videoDetails?.channel.channelTitle ||
+                        currentVideo.channel.channelTitle
+                      )
                         .split(" ")
                         .map((n) => n[0])
                         .join("")
@@ -425,11 +371,11 @@ const VideoDetails = () => {
                   </Avatar>
                   <div>
                     <h4 className="text-white text-sm font-medium">
-                      {videoDetails?.channel.channelTitle || currentVideo.channel.channelTitle}
+                      {videoDetails?.channel.channelTitle ||
+                        currentVideo.channel.channelTitle}
                     </h4>
                     <p className="text-gray-400 text-xs">
-                      {formatCount(subscriberCount)}{" "}
-                      subscribers
+                      {formatCount(subscriberCount)} subscribers
                     </p>
                   </div>
                 </div>
@@ -438,9 +384,7 @@ const VideoDetails = () => {
                   <button
                     onClick={handleLike}
                     className={`flex items-center space-x-2 transition-colors ${
-                      userLiked
-                        ? "text-blue-500"
-                        : "hover:text-blue-500"
+                      userLiked ? "text-blue-500" : "hover:text-blue-500"
                     }`}
                   >
                     <ThumbsUp className="w-5 h-5" />
@@ -450,14 +394,14 @@ const VideoDetails = () => {
                   <button
                     onClick={handleDislike}
                     className={`flex items-center transition-colors ${
-                      userDisliked
-                        ? "text-red-500"
-                        : "hover:text-red-500"
+                      userDisliked ? "text-red-500" : "hover:text-red-500"
                     }`}
                   >
                     <ThumbsDown className="w-5 h-5" />
                     {dislikes > 0 && (
-                      <span className="text-sm ml-1">{formatCount(dislikes)}</span>
+                      <span className="text-sm ml-1">
+                        {formatCount(dislikes)}
+                      </span>
                     )}
                   </button>
                 </div>
@@ -468,21 +412,28 @@ const VideoDetails = () => {
             <div className="p-4 bg-[#1a1a1a] text-white rounded-lg mb-6">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-300">
-                  {formatCount(+(videoDetails?.viewCount || currentVideo.viewCount))} views •{" "}
-                  {formattedPublishedDate}
+                  {formatCount(
+                    +(videoDetails?.viewCount || currentVideo.viewCount)
+                  )}{" "}
+                  views • {formattedPublishedDate}
                 </span>
               </div>
               <p className="leading-6 text-sm text-gray-300">
-                {(videoDetails?.description || currentVideo.description).substring(
+                {(
+                  videoDetails?.description || currentVideo.description
+                ).substring(
                   0,
                   substringCount ||
-                    (videoDetails?.description || currentVideo.description).length
+                    (videoDetails?.description || currentVideo.description)
+                      .length
                 )}
                 {substringCount &&
                   substringCount <
-                    (videoDetails?.description || currentVideo.description).length &&
+                    (videoDetails?.description || currentVideo.description)
+                      .length &&
                   "..."}
-                {(videoDetails?.description || currentVideo.description).length > 200 && (
+                {(videoDetails?.description || currentVideo.description)
+                  .length > 200 && (
                   <button
                     onClick={() =>
                       substringCount === 200

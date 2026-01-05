@@ -16,16 +16,26 @@ const VerticalThumbnail = ({ video }: { video: Video }) => {
       draggable="false"
       onDragStart={(e) => e.preventDefault()}
     >
-      <div className="h-[320px] overflow-hidden rounded-xl select-none">
-        <Image
-          src={video.thumbnail}
-          alt={video.title}
-          width={500}
-          height={500}
-          draggable={false}
-          className="w-full h-full object-cover hover:scale-105 transition-all duration-300 select-none"
-          onDragStart={(e) => e.preventDefault()}
-        />
+      <div className="h-[320px] overflow-hidden rounded-xl select-none bg-gray-300 dark:bg-gray-700">
+        {video.thumbnail ? (
+          <Image
+            src={video.thumbnail}
+            alt={video.title}
+            width={500}
+            height={500}
+            draggable={false}
+            className="w-full h-full object-cover hover:scale-105 transition-all duration-300 select-none"
+            onDragStart={(e) => e.preventDefault()}
+            onError={(e) => {
+              // Hide image on error, showing grey background
+              e.currentTarget.style.display = 'none';
+            }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="text-gray-500 dark:text-gray-400 text-xs">No thumbnail</span>
+          </div>
+        )}
       </div>
       <div className="py-2">
         <h4 className="text-sm font-semibold tracking-tight line-clamp-2 leading-tight mb-1">

@@ -28,14 +28,26 @@ const Thumbnail = ({ video }: { video: Video }) => {
 
   return (
     <Link href={watchUrl} className="w-[300px] mx-auto md:w-[300px] my-4">
-      <div className="h-44 overflow-hidden rounded-2xl bg-slate-300">
-        <Image
-          src={video.thumbnail}
-          alt={video.title}
-          width={500}
-          height={500}
-          className="w-ful h-full object-cover hover:scale-110 transition-all duration-700"
-        />
+      <div className="h-44 overflow-hidden rounded-2xl bg-gray-300 dark:bg-gray-700">
+        {video.thumbnail ? (
+          <Image
+            src={video.thumbnail}
+            alt={video.title}
+            width={500}
+            height={500}
+            className="w-full h-full object-cover hover:scale-110 transition-all duration-700"
+            onError={(e) => {
+              // Hide image on error, showing grey background
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="text-gray-500 dark:text-gray-400 text-xs">
+              No thumbnail
+            </span>
+          </div>
+        )}
       </div>
       <div className="flex space-x-2 py-3">
         <Avatar>

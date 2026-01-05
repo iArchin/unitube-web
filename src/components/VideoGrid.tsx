@@ -21,36 +21,52 @@ const VideoGrid = () => {
   const [shortsVideos, setShortsVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [shortsError, setShortsError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadCategories = async () => {
       try {
         setLoading(true);
         setError(null);
+        setShortsError(null);
 
-        // Fetch categories and shorts in parallel
+        // Fetch categories and shorts separately to handle errors independently
         // Pass token if available, otherwise pass empty string (API will handle it)
-        const [categoriesData, shortsData] = await Promise.all([
-          fetchCategoriesWithVideos(token || "", 1, 10),
-          fetchShortVideos(token || "", 1, 10),
-        ]);
+        const categoriesPromise = fetchCategoriesWithVideos(token || "", 1, 10);
+        const shortsPromise = fetchShortVideos(1, 10);
 
-        setCategoriesData(categoriesData);
-        // Filter out null videos, videos with missing critical properties, and videos with null download_link
-        setShortsVideos(
-          shortsData.filter(
-            (video) =>
-              video !== null &&
-              video !== undefined &&
-              video.id &&
-              video.title &&
-              video.thumbnail &&
-              video.download_link !== null &&
-              video.download_link !== undefined
-          )
-        );
+        // Fetch categories
+        try {
+          const categoriesData = await categoriesPromise;
+          setCategoriesData(categoriesData);
+        } catch (err) {
+          console.error("Failed to fetch categories with videos:", err);
+          setError(
+            err instanceof Error ? err.message : "Failed to load videos"
+          );
+          setCategoriesData([]);
+        }
+
+        // Fetch shorts independently
+        try {
+          const shortsData = await shortsPromise;
+
+          setShortsVideos(shortsData);
+          if (shortsData.length === 0 && shortsData.length > 0) {
+            console.warn(
+              "All short videos were filtered out. Original count:",
+              shortsData.length
+            );
+          }
+        } catch (err) {
+          console.error("Failed to fetch short videos:", err);
+          setShortsError(
+            err instanceof Error ? err.message : "Failed to load shorts"
+          );
+          setShortsVideos([]);
+        }
       } catch (err) {
-        console.error("Failed to fetch categories with videos:", err);
+        console.error("Unexpected error:", err);
         setError(err instanceof Error ? err.message : "Failed to load videos");
       } finally {
         setLoading(false);
@@ -78,7 +94,21 @@ const VideoGrid = () => {
     );
   }
 
-  if (error) {
+  // Shorts are already filtered when setting state, so use them directly
+  const validShortsVideos = shortsVideos;
+
+  // Filter out shorts from main categories
+  const mainCategories = categoriesData.filter(
+    (cat) =>
+      cat.slug.toLowerCase() !== "shorts" &&
+      cat.title.toLowerCase() !== "shorts"
+  );
+
+  // Don't return early if only categories fail - shorts might still be available
+  const hasCategories = categoriesData.length > 0;
+  const hasShorts = validShortsVideos.length > 0 || shortsError;
+
+  if (error && !hasCategories && !hasShorts) {
     return (
       <div className="py-4 px-4 md:px-8">
         <div className="flex items-center justify-center h-64">
@@ -88,34 +118,15 @@ const VideoGrid = () => {
     );
   }
 
-  if (categoriesData.length === 0) {
+  if (!hasCategories && !hasShorts) {
     return (
       <div className="py-4 px-4 md:px-8">
         <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">No categories available</p>
+          <p className="text-muted-foreground">No content available</p>
         </div>
       </div>
     );
   }
-
-  // Filter out shorts from main categories
-  const mainCategories = categoriesData.filter(
-    (cat) =>
-      cat.slug.toLowerCase() !== "shorts" &&
-      cat.title.toLowerCase() !== "shorts"
-  );
-
-  // Filter out null videos, videos with missing critical properties, and videos with null download_link from shorts
-  const validShortsVideos = shortsVideos.filter(
-    (video) =>
-      video !== null &&
-      video !== undefined &&
-      video.id &&
-      video.title &&
-      video.thumbnail &&
-      video.download_link !== null &&
-      video.download_link !== undefined
-  );
 
   return (
     <div className="py-4 px-4 md:px-8">
@@ -128,16 +139,6 @@ const VideoGrid = () => {
             onViewAll={() => handleViewAll(mainCategories[0].slug)}
           />
 
-          {/* Shorts Section - Second Row (if available) */}
-          {validShortsVideos.length > 0 && (
-            <VideoRow
-              title="Shorts"
-              videos={validShortsVideos}
-              onViewAll={handleShortsViewAll}
-              vertical={true}
-            />
-          )}
-
           {/* Remaining category rows */}
           {mainCategories.slice(1).map((category) => (
             <VideoRow
@@ -149,6 +150,27 @@ const VideoGrid = () => {
           ))}
         </>
       )}
+
+      {/* Shorts Section - Show even if no categories */}
+      {shortsError ? (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4 px-2">
+            <h2 className="text-xl font-bold text-foreground">Shorts</h2>
+          </div>
+          <div className="px-2">
+            <p className="text-sm text-muted-foreground">
+              Unable to load shorts: {shortsError}
+            </p>
+          </div>
+        </div>
+      ) : validShortsVideos.length > 0 ? (
+        <VideoRow
+          title="Shorts"
+          videos={validShortsVideos}
+          onViewAll={handleShortsViewAll}
+          vertical={true}
+        />
+      ) : null}
     </div>
   );
 };
