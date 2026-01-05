@@ -41,7 +41,7 @@ const HorizontalThumbnail = ({ video }: { video: Video }) => {
             width={500}
             height={500}
             draggable={false}
-            className="w-full h-full object-cover hover:scale-105 transition-all duration-300 select-none"
+            className="w-full h-full object-contain hover:scale-105 transition-all duration-300 select-none"
             onDragStart={(e) => e.preventDefault()}
             onError={(e) => {
               // Hide image on error, showing grey background
