@@ -4,13 +4,13 @@ import { useState, useEffect, useRef } from "react";
 import { useSelector } from "react-redux";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { 
-  ChevronUp, 
-  ChevronDown, 
-  Heart, 
-  MessageCircle, 
+import {
+  ChevronUp,
+  ChevronDown,
+  Heart,
+  MessageCircle,
   Share2,
-  MoreVertical
+  MoreVertical,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { fetchShortVideos } from "@/lib/api";
+import { fetchShortVideos, fetchVideoById } from "@/lib/api";
 import { Video } from "../../../../types/custom_types";
 import { RootState } from "@/store/store";
 import { formatCount, formatPublishedDate } from "@/lib/utils";
@@ -77,8 +77,36 @@ const ShortsPage = () => {
       try {
         setLoading(true);
         setError(null);
-        // Pass token if available, otherwise pass empty string (API will handle it)
-        const shortsData = await fetchShortVideos(token || "", 1, 50);
+
+        // If a video ID is provided in the URL, fetch that specific video
+        const videoIdFromUrl = searchParams.get("id");
+        if (videoIdFromUrl) {
+          try {
+            const video = await fetchVideoById(
+              videoIdFromUrl,
+              token || undefined
+            );
+            // Verify it's a short type video and has download_link
+            if (video && video.download_link) {
+              setShorts([video]);
+              setCurrentIndex(0);
+              setPlayingVideos(new Set([0]));
+            } else {
+              setError("Video not found or unavailable");
+            }
+          } catch (err) {
+            console.error("Failed to fetch video:", err);
+            setError(
+              err instanceof Error ? err.message : "Failed to load video"
+            );
+          } finally {
+            setLoading(false);
+          }
+          return;
+        }
+
+        // Otherwise, fetch the list of shorts
+        const shortsData = await fetchShortVideos(1, 50);
         const filteredShorts = shortsData.filter(
           (video) =>
             video !== null &&
@@ -90,18 +118,8 @@ const ShortsPage = () => {
             video.download_link !== undefined
         );
         setShorts(filteredShorts);
-
-        // If a video ID is provided in the URL, find its index and set it as current
-        const videoIdFromUrl = searchParams.get("id");
-        if (videoIdFromUrl && filteredShorts.length > 0) {
-          const videoIndex = filteredShorts.findIndex(
-            (video) => video.id === videoIdFromUrl
-          );
-          if (videoIndex !== -1) {
-            setCurrentIndex(videoIndex);
-            setPlayingVideos(new Set([videoIndex]));
-          }
-        }
+        setCurrentIndex(0);
+        setPlayingVideos(new Set([0]));
       } catch (err) {
         console.error("Failed to fetch shorts:", err);
         setError(err instanceof Error ? err.message : "Failed to load shorts");
@@ -143,7 +161,11 @@ const ShortsPage = () => {
       const itemHeight = window.innerHeight;
       const newIndex = Math.round(scrollPosition / itemHeight);
 
-      if (newIndex !== currentIndex && newIndex >= 0 && newIndex < shorts.length) {
+      if (
+        newIndex !== currentIndex &&
+        newIndex >= 0 &&
+        newIndex < shorts.length
+      ) {
         setCurrentIndex(newIndex);
         // Pause previous video and play current
         setPlayingVideos(new Set([newIndex]));
@@ -437,4 +459,3 @@ const ShortsPage = () => {
 };
 
 export default ShortsPage;
-
