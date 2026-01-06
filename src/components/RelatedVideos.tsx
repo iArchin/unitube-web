@@ -1,9 +1,9 @@
-import { Dot } from 'lucide-react';
-import Image from 'next/image';
-import Link from 'next/link';
+import { Dot } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 
-import { formatCount, formatPublishedDate } from '@/lib/utils';
-import { Video } from '../../types/custom_types';
+import { formatCount, formatPublishedDate } from "@/lib/utils";
+import { Video } from "../../types/custom_types";
 
 const RelatedVideos = ({ video }: { video: Video }) => {
   // Build URL with download_link, title, and description as query parameters
@@ -20,36 +20,35 @@ const RelatedVideos = ({ video }: { video: Video }) => {
   if (video?.channel.channelTitle) {
     params.append("channel", video.channel.channelTitle);
   }
-  
-  const watchUrl = `/watch/${video?.id}${params.toString() ? `?${params.toString()}` : ""}`;
+
+  const watchUrl = `/watch/${video?.id}${
+    params.toString() ? `?${params.toString()}` : ""
+  }`;
 
   return (
-    <Link
-      href={watchUrl}
-      className='h-32 my-4 flex gap-3 justify-between'
-    >
-      <div className='flex-1 rounded-2xl overflow-hidden'>
+    <Link href={watchUrl} className="h-32 my-4 flex gap-3 justify-between">
+      <div className="flex-1 rounded-2xl overflow-hidden">
         <Image
           src={video.thumbnail}
           alt={video.title}
           height={300}
           width={300}
-          className='w-full h-full object-cover'
+          className="w-full h-full object-cover"
         />
       </div>
 
-      <div className='flex-1'>
-        <h4 className='text-sm'>{video.title.substring(0, 50)}</h4>
-        <Link 
+      <div className="flex-1">
+        <h4 className="text-sm">{video.title.substring(0, 50)}</h4>
+        <Link
           href={`/channels/${video.channel.channelId}`}
           onClick={(e) => e.stopPropagation()}
-          className='text-xs my-2 block hover:text-purple-400 transition-colors'
+          className="text-xs my-2 block hover:text-purple-400 transition-colors"
         >
           {video.channel.channelTitle}
         </Link>
-        <div className='text-xs flex items-center text-background-light'>
-          {formatCount(+video.viewCount)} views {<Dot />}{' '}
-          {formatPublishedDate(video.publishedDate)}
+        <div className="text-xs flex items-center text-background-light">
+          {formatCount(+video.viewCount)} views {<Dot />}{" "}
+          {formatPublishedDate(video.created_at)}
         </div>
       </div>
     </Link>

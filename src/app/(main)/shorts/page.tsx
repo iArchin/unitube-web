@@ -331,7 +331,7 @@ const ShortsPage = () => {
                   </h3>
                   <p className="text-sm text-muted-foreground">
                     {formatCount(+short.viewCount)} views •{" "}
-                    {formatPublishedDate(short.publishedDate)}
+                    {formatPublishedDate(short.created_at)}
                   </p>
                 </div>
               </div>
@@ -444,7 +444,7 @@ const ShortsPage = () => {
                 <div className="flex justify-end mt-2">
                   <Button
                     size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    className="bg-purple-500 hover:bg-purple-700 text-white"
                   >
                     Comment
                   </Button>

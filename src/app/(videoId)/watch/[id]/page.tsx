@@ -15,6 +15,8 @@ import {
   fetchVideoById,
   fetchVideosByCategoryId,
   GetVideoResponse,
+  likeVideo,
+  dislikeVideo,
 } from "@/lib/api";
 import { RootState } from "@/store/store";
 import axios from "axios";
@@ -53,6 +55,8 @@ const VideoDetails = () => {
   const [dislikes, setDislikes] = useState(0);
   const [userLiked, setUserLiked] = useState(false);
   const [userDisliked, setUserDisliked] = useState(false);
+  const [liking, setLiking] = useState(false);
+  const [disliking, setDisliking] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
   const [relatedVideos, setRelatedVideos] = useState<Video[]>([]);
   const [relatedVideosLoading, setRelatedVideosLoading] = useState(false);
@@ -136,32 +140,104 @@ const VideoDetails = () => {
   }, [id, token]);
 
   // Handle like button
-  const handleLike = () => {
-    if (userDisliked) {
-      setDislikes((prev) => prev - 1);
-      setUserDisliked(false);
+  const handleLike = async () => {
+    if (!token || !id) {
+      // If not authenticated, show message or redirect to login
+      alert("Please login to like videos");
+      return;
     }
-    if (userLiked) {
-      setLikes((prev) => prev - 1);
-      setUserLiked(false);
-    } else {
-      setLikes((prev) => prev + 1);
-      setUserLiked(true);
+
+    if (liking) return; // Prevent multiple simultaneous requests
+
+    // Store previous state for potential rollback
+    const wasLiked = userLiked;
+    const wasDisliked = userDisliked;
+    const previousLikes = likes;
+    const previousDislikes = dislikes;
+
+    try {
+      setLiking(true);
+
+      // Optimistic update
+      if (wasDisliked) {
+        setDislikes((prev) => prev - 1);
+        setUserDisliked(false);
+      }
+      if (wasLiked) {
+        setLikes((prev) => prev - 1);
+        setUserLiked(false);
+      } else {
+        setLikes((prev) => prev + 1);
+        setUserLiked(true);
+      }
+
+      // Call API
+      await likeVideo(id as string, token);
+
+      // Optionally refresh video data to get updated counts
+      // You can refetch the video here if the API returns updated counts
+    } catch (error) {
+      console.error("Failed to like video:", error);
+      // Revert optimistic update on error
+      setLikes(previousLikes);
+      setDislikes(previousDislikes);
+      setUserLiked(wasLiked);
+      setUserDisliked(wasDisliked);
+      // Show error message to user
+      alert("Failed to like video. Please try again.");
+    } finally {
+      setLiking(false);
     }
   };
 
   // Handle dislike button
-  const handleDislike = () => {
-    if (userLiked) {
-      setLikes((prev) => prev - 1);
-      setUserLiked(false);
+  const handleDislike = async () => {
+    if (!token || !id) {
+      // If not authenticated, show message or redirect to login
+      alert("Please login to dislike videos");
+      return;
     }
-    if (userDisliked) {
-      setDislikes((prev) => prev - 1);
-      setUserDisliked(false);
-    } else {
-      setDislikes((prev) => prev + 1);
-      setUserDisliked(true);
+
+    if (disliking) return; // Prevent multiple simultaneous requests
+
+    // Store previous state for potential rollback
+    const wasLiked = userLiked;
+    const wasDisliked = userDisliked;
+    const previousLikes = likes;
+    const previousDislikes = dislikes;
+
+    try {
+      setDisliking(true);
+
+      // Optimistic update
+      if (wasLiked) {
+        setLikes((prev) => prev - 1);
+        setUserLiked(false);
+      }
+      if (wasDisliked) {
+        setDislikes((prev) => prev - 1);
+        setUserDisliked(false);
+      } else {
+        setDislikes((prev) => prev + 1);
+        setUserDisliked(true);
+      }
+
+      // Call API
+      await dislikeVideo(id as string, token);
+
+      // Optionally refresh video data to get updated counts
+      // You can refetch the video here if the API returns updated counts
+    } catch (error) {
+      console.error("Failed to dislike video:", error);
+      // Revert optimistic update on error
+      setLikes(previousLikes);
+      setDislikes(previousDislikes);
+      setUserLiked(wasLiked);
+      setUserDisliked(wasDisliked);
+      // Show error message to user
+      alert("Failed to dislike video. Please try again.");
+    } finally {
+      setDisliking(false);
     }
   };
 
@@ -346,24 +422,32 @@ const VideoDetails = () => {
                   <div className="flex space-x-4 text-sm items-center bg-[#1a1a1a] text-white px-3 md:px-5 py-2 rounded-3xl">
                     <button
                       onClick={handleLike}
+                      disabled={liking || !token}
                       className={`flex items-center space-x-2 transition-colors ${
                         userLiked ? "text-blue-500" : "hover:text-blue-500"
+                      } ${liking ? "opacity-50 cursor-not-allowed" : ""} ${
+                        !token ? "opacity-50 cursor-not-allowed" : ""
                       }`}
                     >
                       <ThumbsUp className="w-5 h-5" />
-                      <span className="text-sm">{formatCount(likes)}</span>
+                      <span className="text-sm">
+                        {liking ? "..." : formatCount(likes)}
+                      </span>
                     </button>
                     <span className="text-gray-600">|</span>
                     <button
                       onClick={handleDislike}
+                      disabled={disliking || !token}
                       className={`flex items-center transition-colors ${
                         userDisliked ? "text-red-500" : "hover:text-red-500"
+                      } ${disliking ? "opacity-50 cursor-not-allowed" : ""} ${
+                        !token ? "opacity-50 cursor-not-allowed" : ""
                       }`}
                     >
                       <ThumbsDown className="w-5 h-5" />
                       {dislikes > 0 && (
                         <span className="text-sm ml-1">
-                          {formatCount(dislikes)}
+                          {disliking ? "..." : formatCount(dislikes)}
                         </span>
                       )}
                     </button>
@@ -455,20 +539,21 @@ const VideoDetails = () => {
                       className="w-full min-h-[80px] p-3 border border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[#1a1a1a] text-white placeholder-gray-400"
                     />
                     <div className="flex justify-end space-x-2 mt-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setNewComment("")}
-                        disabled={!newComment.trim()}
-                        className="text-gray-400 hover:text-white"
-                      >
-                        Cancel
-                      </Button>
+                      {newComment.trim() && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setNewComment("")}
+                          className="text-gray-400 hover:text-white"
+                        >
+                          Clear
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         onClick={handleCommentSubmit}
                         disabled={!newComment.trim()}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        className="bg-purple-500 hover:bg-purple-700 text-white"
                       >
                         Comment
                       </Button>

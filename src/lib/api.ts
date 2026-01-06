@@ -634,6 +634,8 @@ export async function fetchShortVideos(
 
 export interface CategoryVideosResponse {
   data: Array<{
+    views_count: number;
+    created_at: string;
     user: any;
     id: number;
     video_type: string;
@@ -694,24 +696,6 @@ export async function fetchVideosByCategoryId(
       );
     }
 
-    // Helper function to generate random view count
-    const getRandomViewCount = (): string => {
-      const views = Math.floor(Math.random() * 10000000) + 100; // Random between 100 and 10,000,100
-      return views.toString();
-    };
-
-    // Helper function to generate random date (within last 2 years)
-    const getRandomDate = (): string => {
-      const now = new Date();
-      const twoYearsAgo = new Date(
-        now.getTime() - 2 * 365 * 24 * 60 * 60 * 1000
-      );
-      const randomTime =
-        twoYearsAgo.getTime() +
-        Math.random() * (now.getTime() - twoYearsAgo.getTime());
-      return new Date(randomTime).toISOString();
-    };
-
     // Transform API response to Video format and filter out null videos
     return data.data
       .filter((video) => video !== null && video !== undefined)
@@ -731,13 +715,13 @@ export async function fetchVideosByCategoryId(
           title: video.title || "Untitled Video",
           description: video.description || "",
           thumbnail,
-          viewCount: getRandomViewCount(),
+          viewCount: video.views_count?.toString() || "0",
           channel: {
             channelId: video.user_id.toString(),
             channelTitle: video.user.name || "User Channel", // API doesn't provide channel name
             channelImage: `https://via.placeholder.com/40x40/6366f1/ffffff?text=U${video.user_id}`, // Placeholder
           },
-          created_at: getRandomDate(),
+          created_at: video.created_at,
           download_link: video.download_link || null,
         } as Video;
       });
@@ -977,5 +961,77 @@ export async function fetchUserVideos(
     };
   } catch (error) {
     handleAPIError(error, "fetchUserVideos");
+  }
+}
+
+/**
+ * Likes a video
+ * @param videoId - Video ID (required)
+ * @param token - Authentication token (required)
+ * @returns API response
+ */
+export async function likeVideo(
+  videoId: string | number,
+  token: string
+): Promise<any> {
+  if (!videoId) {
+    throw new ValidationError("Video ID cannot be empty");
+  }
+
+  if (!token?.trim()) {
+    throw new ValidationError("Authentication token is required");
+  }
+
+  try {
+    const { data } = await axios.post(
+      `https://api.unitribe.app/ut/api/videos/${videoId}/like`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000,
+      }
+    );
+
+    return data;
+  } catch (error) {
+    handleAPIError(error, "likeVideo");
+  }
+}
+
+/**
+ * Dislikes a video
+ * @param videoId - Video ID (required)
+ * @param token - Authentication token (required)
+ * @returns API response
+ */
+export async function dislikeVideo(
+  videoId: string | number,
+  token: string
+): Promise<any> {
+  if (!videoId) {
+    throw new ValidationError("Video ID cannot be empty");
+  }
+
+  if (!token?.trim()) {
+    throw new ValidationError("Authentication token is required");
+  }
+
+  try {
+    const { data } = await axios.post(
+      `https://api.unitribe.app/ut/api/videos/${videoId}/dislike`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000,
+      }
+    );
+
+    return data;
+  } catch (error) {
+    handleAPIError(error, "dislikeVideo");
   }
 }
