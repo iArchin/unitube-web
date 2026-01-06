@@ -206,6 +206,21 @@ const ShortsPage = () => {
   // Handle keyboard navigation
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
+      // Don't handle navigation when comments dialog is open
+      if (commentsOpen) {
+        return;
+      }
+
+      // Don't handle navigation when user is typing in an input/textarea
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      ) {
+        return;
+      }
+
       if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
         e.preventDefault();
         navigateUp();
@@ -223,7 +238,7 @@ const ShortsPage = () => {
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [navigateUp, navigateDown]);
+  }, [navigateUp, navigateDown, commentsOpen]);
 
   // Update URL params when current video changes
   useEffect(() => {
@@ -246,6 +261,9 @@ const ShortsPage = () => {
     let scrollTimeout: NodeJS.Timeout;
 
     const handleScroll = () => {
+      // Don't handle scroll when comments dialog is open
+      if (commentsOpen) return;
+
       if (isScrolling) return;
       isScrolling = true;
 
@@ -256,8 +274,8 @@ const ShortsPage = () => {
 
       // Debounce scroll handling
       scrollTimeout = setTimeout(() => {
-        // Don't update index if we're programmatically navigating
-        if (isNavigating.current) {
+        // Don't update index if we're programmatically navigating or dialog is open
+        if (isNavigating.current || commentsOpen) {
           isScrolling = false;
           return;
         }
@@ -287,10 +305,13 @@ const ShortsPage = () => {
         clearTimeout(scrollTimeout);
       }
     };
-  }, [currentIndex, shorts.length]);
+  }, [currentIndex, shorts.length, commentsOpen]);
 
   // Scroll to current video when index changes (but not from user scroll)
   useEffect(() => {
+    // Don't scroll when comments dialog is open
+    if (commentsOpen) return;
+
     if (videoRefs.current[currentIndex] && shorts.length > 0) {
       const container = containerRef.current;
       if (!container) return;
@@ -311,20 +332,35 @@ const ShortsPage = () => {
         }
       });
     }
-  }, [currentIndex, shorts.length]);
+  }, [currentIndex, shorts.length, commentsOpen]);
 
   // Handle touch/swipe gestures for mobile
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
-    touchEndY.current = e.touches[0].clientY;
-    touchStartTime.current = Date.now();
-  }, []);
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      // Don't handle touch when comments dialog is open
+      if (commentsOpen) return;
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    touchEndY.current = e.touches[0].clientY;
-  }, []);
+      touchStartY.current = e.touches[0].clientY;
+      touchEndY.current = e.touches[0].clientY;
+      touchStartTime.current = Date.now();
+    },
+    [commentsOpen]
+  );
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      // Don't handle touch when comments dialog is open
+      if (commentsOpen) return;
+
+      touchEndY.current = e.touches[0].clientY;
+    },
+    [commentsOpen]
+  );
 
   const handleTouchEnd = useCallback(() => {
+    // Don't handle touch when comments dialog is open
+    if (commentsOpen) return;
+
     if (touchStartY.current === 0) {
       return;
     }
@@ -345,7 +381,7 @@ const ShortsPage = () => {
     touchStartY.current = 0;
     touchEndY.current = 0;
     touchStartTime.current = 0;
-  }, [navigateDown, navigateUp]);
+  }, [navigateDown, navigateUp, commentsOpen]);
 
   const toggleLike = (videoId: string) => {
     setLikedVideos((prev) => {
