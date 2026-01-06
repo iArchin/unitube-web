@@ -326,9 +326,9 @@ const VideoDetails = () => {
   // Memoize formatted published date to prevent recalculation on re-renders
   const formattedPublishedDate = useMemo(() => {
     return formatPublishedDate(
-      videoDetails?.publishedDate || currentVideo.publishedDate
+      videoDetails?.created_at || currentVideo.created_at
     );
-  }, [videoDetails?.publishedDate, currentVideo.publishedDate]);
+  }, [videoDetails?.created_at, currentVideo.created_at]);
 
   // Determine video URL - prioritize download_link from:
   // 1. videoDetails (from API fetch)
