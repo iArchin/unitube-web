@@ -76,10 +76,23 @@ const ShortsPage = () => {
   const touchEndY = useRef<number>(0);
   const touchStartTime = useRef<number>(0);
   const isNavigating = useRef<boolean>(false);
+  const initialLoadDone = useRef<boolean>(false);
   const minSwipeDistance = 50; // Minimum distance for a swipe
-  const maxSwipeTime = 300; // Maximum time for a swipe (ms)
+  const maxSwipeTime = 500; // Maximum time for a swipe (ms)
+
+  // Store initial video ID from URL (only on first load)
+  const initialVideoId = useRef<string | null>(null);
 
   useEffect(() => {
+    if (!initialLoadDone.current) {
+      initialVideoId.current = searchParams.get("id");
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    // Only load data once on initial mount
+    if (initialLoadDone.current) return;
+
     const loadShorts = async () => {
       try {
         setLoading(true);
@@ -89,7 +102,7 @@ const ShortsPage = () => {
         const shortsData = await fetchShortVideos(1, 50);
 
         // Check if there's a specific video ID in the URL
-        const videoIdFromUrl = searchParams.get("id");
+        const videoIdFromUrl = initialVideoId.current;
         let startIndex = 0;
 
         if (videoIdFromUrl) {
@@ -131,6 +144,7 @@ const ShortsPage = () => {
         setShorts(shortsData);
         setCurrentIndex(startIndex);
         setPlayingVideos(new Set([startIndex]));
+        initialLoadDone.current = true;
       } catch (err) {
         console.error("Failed to fetch shorts:", err);
         setError(err instanceof Error ? err.message : "Failed to load shorts");
@@ -140,7 +154,7 @@ const ShortsPage = () => {
     };
 
     loadShorts();
-  }, [token, searchParams]);
+  }, [token]);
 
   // Navigation functions - must be defined before any useEffect that uses them
   const navigateUp = useCallback(() => {
@@ -286,19 +300,18 @@ const ShortsPage = () => {
   }, [currentIndex, shorts.length]);
 
   // Handle touch/swipe gestures for mobile
-  const handleTouchStart = (e: React.TouchEvent) => {
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
-    touchStartTime.current = Date.now();
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
     touchEndY.current = e.touches[0].clientY;
-  };
+    touchStartTime.current = Date.now();
+  }, []);
 
-  const handleTouchEnd = () => {
-    if (!touchStartY.current || !touchEndY.current) {
-      touchStartY.current = 0;
-      touchEndY.current = 0;
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    touchEndY.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchEnd = useCallback(() => {
+    if (touchStartY.current === 0) {
       return;
     }
 
@@ -318,7 +331,7 @@ const ShortsPage = () => {
     touchStartY.current = 0;
     touchEndY.current = 0;
     touchStartTime.current = 0;
-  };
+  }, [navigateDown, navigateUp]);
 
   const toggleLike = (videoId: string) => {
     setLikedVideos((prev) => {
@@ -364,9 +377,9 @@ const ShortsPage = () => {
   }
 
   return (
-    <div className="relative min-h-screen bg-background text-white">
-      {/* Navigation Arrows - Always visible */}
-      <div className="fixed right-4 top-1/2 -translate-y-1/2 z-30 flex-col gap-3 hidden sm:flex items-center">
+    <div className="relative min-h-screen bg-background text-white overflow-hidden">
+      {/* Navigation Arrows - Hidden on mobile */}
+      <div className="fixed right-4 top-1/2 -translate-y-1/2 z-30 flex-col gap-3 hidden md:flex items-center">
         <button
           onClick={navigateUp}
           disabled={currentIndex === 0}
@@ -394,8 +407,8 @@ const ShortsPage = () => {
       {/* Shorts Container */}
       <div
         ref={containerRef}
-        className="h-screen overflow-y-auto snap-y snap-mandatory scrollbar-hide"
-        style={{ scrollBehavior: "smooth" }}
+        className="h-screen overflow-y-auto snap-y snap-mandatory scrollbar-hide touch-pan-y"
+        style={{ scrollBehavior: "smooth", WebkitOverflowScrolling: "touch" }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -404,10 +417,10 @@ const ShortsPage = () => {
           <div
             key={short.id}
             ref={(el) => (videoRefs.current[index] = el)}
-            className="h-screen snap-start flex flex-col items-center justify-center gap-5 px-4 md:px-6 pb-20 md:pb-0"
+            className="h-screen snap-start snap-always flex flex-col items-center justify-center gap-3 md:gap-5 px-3 md:px-6 pb-4 md:pb-0"
           >
             {/* Video Player */}
-            <div className="w-full max-w-[480px] h-[70vh] max-h-[75vh] md:h-[75vh]">
+            <div className="w-full max-w-[480px] h-[60vh] sm:h-[65vh] md:h-[70vh] max-h-[75vh]">
               <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black/80">
                 {short.download_link ? (
                   <ReactPlayer
@@ -438,9 +451,9 @@ const ShortsPage = () => {
             </div>
 
             {/* Video Info & Actions below the video */}
-            <div className="w-full max-w-[480px] space-y-3">
-              <div className="flex items-center gap-3">
-                <Avatar className="w-10 h-10">
+            <div className="w-full max-w-[480px] space-y-2 md:space-y-3">
+              <div className="flex items-center gap-2 md:gap-3">
+                <Avatar className="w-8 h-8 md:w-10 md:h-10">
                   <AvatarImage
                     src={short.channel.channelImage}
                     alt={short.channel.channelTitle}
@@ -450,61 +463,63 @@ const ShortsPage = () => {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-base font-semibold truncate">
+                  <h3 className="text-sm md:text-base font-semibold truncate">
                     {short.channel.channelTitle}
                   </h3>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs md:text-sm text-muted-foreground">
                     {formatCount(+short.viewCount)} views •{" "}
                     {formatPublishedDate(short.created_at)}
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <p className="text-lg font-semibold leading-snug line-clamp-3">
+              <div className="space-y-1 md:space-y-2">
+                <p className="text-base md:text-lg font-semibold leading-snug line-clamp-2 md:line-clamp-3">
                   {short.title}
                 </p>
                 {short.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-3">
+                  <p className="text-xs md:text-sm text-muted-foreground line-clamp-2 md:line-clamp-3 hidden sm:block">
                     {short.description}
                   </p>
                 )}
               </div>
 
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between gap-2 md:gap-3">
+                <div className="flex items-center gap-2 md:gap-3">
                   <button
                     onClick={() => toggleLike(short.id)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                    className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
                   >
                     <Heart
-                      className={`w-5 h-5 ${
+                      className={`w-4 h-4 md:w-5 md:h-5 ${
                         likedVideos.has(short.id)
                           ? "text-red-500 fill-red-500"
                           : "text-white"
                       }`}
                     />
-                    <span className="text-sm">
+                    <span className="text-xs md:text-sm">
                       {likedVideos.has(short.id) ? "Liked" : "Like"}
                     </span>
                   </button>
 
                   <button
                     onClick={() => openComments(short.id)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                    className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
                   >
-                    <MessageCircle className="w-5 h-5 text-white" />
-                    <span className="text-sm">{defaultComments.length}</span>
+                    <MessageCircle className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                    <span className="text-xs md:text-sm">
+                      {defaultComments.length}
+                    </span>
                   </button>
 
-                  <button className="flex items-center gap-2 px-3 py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
-                    <Share2 className="w-5 h-5 text-white" />
-                    <span className="text-sm">Share</span>
+                  <button className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
+                    <Share2 className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                    <span className="text-xs md:text-sm">Share</span>
                   </button>
                 </div>
 
-                <button className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
-                  <MoreVertical className="w-5 h-5 text-white" />
+                <button className="p-1.5 md:p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
+                  <MoreVertical className="w-4 h-4 md:w-5 md:h-5 text-white" />
                 </button>
               </div>
             </div>

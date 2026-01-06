@@ -2,6 +2,7 @@
 
 import { FileVideo, Home, MonitorPlay, PlusCircle } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useSelector } from 'react-redux';
 
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -9,6 +10,13 @@ import { RootState } from '@/store/store';
 
 const FooterMenu = () => {
   const user = useSelector((state: RootState) => state.auth.user);
+  const pathname = usePathname();
+  
+  // Hide footer menu on shorts page
+  if (pathname.startsWith('/shorts')) {
+    return null;
+  }
+  
   return (
     <footer className='bg-white dark:bg-black md:hidden text-[10px] h-20 fixed w-full flex items-center justify-around bottom-0 left-0 z-20 border-t border-gray-200 dark:border-gray-800'>
       <Link href="/" className='flex flex-col items-center gap-1'>

@@ -1,7 +1,16 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
+  const pathname = usePathname();
+  
+  // Hide footer on shorts page
+  if (pathname.startsWith('/shorts')) {
+    return null;
+  }
 
   return (
     <footer className="border-t border-[#333] bg-[#111111] pb-20 md:pb-8 md:ml-16 w-full md:w-[calc(100%-4rem)]">
