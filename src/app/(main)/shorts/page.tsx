@@ -11,6 +11,10 @@ import {
   MessageCircle,
   Share2,
   MoreVertical,
+  Bookmark,
+  Flag,
+  Copy,
+  X,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -20,6 +24,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { fetchShortVideos, fetchVideoById } from "@/lib/api";
 import { Video } from "../../../../types/custom_types";
 import { RootState } from "@/store/store";
@@ -345,9 +356,33 @@ const ShortsPage = () => {
     });
   };
 
-  const openComments = (videoId: string) => {
+  const openComments = (e: React.MouseEvent, videoId: string) => {
+    e.stopPropagation();
     setSelectedVideoId(videoId);
     setCommentsOpen(true);
+  };
+
+  const handleShare = (e: React.MouseEvent, videoId: string) => {
+    e.stopPropagation();
+    // Copy video link to clipboard
+    const videoUrl = `${window.location.origin}/shorts?id=${videoId}`;
+    navigator.clipboard.writeText(videoUrl).then(() => {
+      // You could add a toast notification here
+      console.log("Link copied to clipboard");
+    });
+  };
+
+  const handleCopyLink = (e: React.MouseEvent, videoId: string) => {
+    e.stopPropagation();
+    const videoUrl = `${window.location.origin}/shorts?id=${videoId}`;
+    navigator.clipboard.writeText(videoUrl).then(() => {
+      console.log("Link copied to clipboard");
+    });
+  };
+
+  const handleNavigateToChannel = (e: React.MouseEvent, channelId: string) => {
+    e.stopPropagation();
+    router.push(`/channels/${channelId}`);
   };
 
   const currentVideo = shorts[currentIndex];
@@ -453,16 +488,28 @@ const ShortsPage = () => {
             {/* Video Info & Actions below the video */}
             <div className="w-full max-w-[480px] space-y-2 md:space-y-3">
               <div className="flex items-center gap-2 md:gap-3">
-                <Avatar className="w-8 h-8 md:w-10 md:h-10">
-                  <AvatarImage
-                    src={short.channel.channelImage}
-                    alt={short.channel.channelTitle}
-                  />
-                  <AvatarFallback className="text-xs">
-                    {short.channel.channelTitle.substring(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
+                <button
+                  onClick={(e) =>
+                    handleNavigateToChannel(e, short.channel.channelId)
+                  }
+                  className="cursor-pointer"
+                >
+                  <Avatar className="w-8 h-8 md:w-10 md:h-10 hover:opacity-80 transition-opacity">
+                    <AvatarImage
+                      src={short.channel.channelImage}
+                      alt={short.channel.channelTitle}
+                    />
+                    <AvatarFallback className="text-xs">
+                      {short.channel.channelTitle.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+                <button
+                  onClick={(e) =>
+                    handleNavigateToChannel(e, short.channel.channelId)
+                  }
+                  className="flex-1 min-w-0 text-left cursor-pointer hover:opacity-80 transition-opacity"
+                >
                   <h3 className="text-sm md:text-base font-semibold truncate">
                     {short.channel.channelTitle}
                   </h3>
@@ -470,7 +517,7 @@ const ShortsPage = () => {
                     {formatCount(+short.viewCount)} views •{" "}
                     {formatPublishedDate(short.created_at)}
                   </p>
-                </div>
+                </button>
               </div>
 
               <div className="space-y-1 md:space-y-2">
@@ -487,7 +534,10 @@ const ShortsPage = () => {
               <div className="flex items-center justify-between gap-2 md:gap-3">
                 <div className="flex items-center gap-2 md:gap-3">
                   <button
-                    onClick={() => toggleLike(short.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleLike(short.id);
+                    }}
                     className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
                   >
                     <Heart
@@ -503,7 +553,7 @@ const ShortsPage = () => {
                   </button>
 
                   <button
-                    onClick={() => openComments(short.id)}
+                    onClick={(e) => openComments(e, short.id)}
                     className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
                   >
                     <MessageCircle className="w-4 h-4 md:w-5 md:h-5 text-white" />
@@ -512,15 +562,62 @@ const ShortsPage = () => {
                     </span>
                   </button>
 
-                  <button className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
+                  <button
+                    onClick={(e) => handleShare(e, short.id)}
+                    className="flex items-center gap-1 md:gap-2 px-2 md:px-3 py-1.5 md:py-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                  >
                     <Share2 className="w-4 h-4 md:w-5 md:h-5 text-white" />
                     <span className="text-xs md:text-sm">Share</span>
                   </button>
                 </div>
 
-                <button className="p-1.5 md:p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
-                  <MoreVertical className="w-4 h-4 md:w-5 md:h-5 text-white" />
-                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      onClick={(e) => e.stopPropagation()}
+                      className="p-1.5 md:p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors"
+                    >
+                      <MoreVertical className="w-4 h-4 md:w-5 md:h-5 text-white" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-56 bg-[#1a1a1a] border-gray-800"
+                  >
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCopyLink(e, short.id);
+                      }}
+                      className="focus:bg-[#2a2a2a] focus:text-white cursor-pointer"
+                    >
+                      <Copy className="w-4 h-4 mr-2" />
+                      Copy link
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => e.stopPropagation()}
+                      className="focus:bg-[#2a2a2a] focus:text-white cursor-pointer"
+                    >
+                      <Bookmark className="w-4 h-4 mr-2" />
+                      Save
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-gray-800" />
+                    <DropdownMenuItem
+                      onClick={(e) => e.stopPropagation()}
+                      className="focus:bg-[#2a2a2a] focus:text-white cursor-pointer"
+                    >
+                      <X className="w-4 h-4 mr-2" />
+                      Not interested
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={(e) => e.stopPropagation()}
+                      className="focus:bg-[#2a2a2a] focus:text-white cursor-pointer text-red-400"
+                    >
+                      <Flag className="w-4 h-4 mr-2" />
+                      Report
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
           </div>
