@@ -1,6 +1,7 @@
 import axios from "axios";
 
 import { Video } from "../../types/custom_types";
+import { User } from "../types/auth";
 
 // Custom error classes for better error handling
 export class APIError extends Error {
@@ -1190,3 +1191,122 @@ export async function createComment(
     handleAPIError(error, "createComment");
   }
 }
+
+/**
+ * Fetches the current user profile
+ * @param token - Authentication token (required)
+ * @returns User profile data
+ */
+export async function fetchUserProfile(token: string): Promise<User> {
+  if (!token?.trim()) {
+    throw new ValidationError("Authentication token is required");
+  }
+
+  try {
+    const { data } = await axios.get<User>(
+      "https://api.unitribe.app/ut/api/user",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000,
+      }
+    );
+
+    return data;
+  } catch (error) {
+    handleAPIError(error, "fetchUserProfile");
+  }
+}
+
+/**
+ * Updates the user's profile image
+ * @param image - Image file (required)
+ * @param token - Authentication token (required)
+ * @returns Updated user data
+ */
+export async function updateProfileImage(image: File, token: string): Promise<User> {
+  if (!token?.trim()) {
+    throw new ValidationError("Authentication token is required");
+  }
+
+  const formData = new FormData();
+  formData.append("profile_image", image);
+
+  try {
+    const { data } = await axios.post<User>(
+      "https://api.unitribe.app/ut/api/user/profile-image",
+      formData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+        timeout: 30000,
+      }
+    );
+
+    return data;
+  } catch (error) {
+    handleAPIError(error, "updateProfileImage");
+  }
+}
+
+/**
+ * Updates the user's bio description
+ * @param bio - Bio description (required)
+ * @param token - Authentication token (required)
+ * @returns Updated user data
+ */
+export async function updateBio(bio: string, token: string): Promise<User> {
+  if (!token?.trim()) {
+    throw new ValidationError("Authentication token is required");
+  }
+
+  try {
+    const { data } = await axios.put<User>(
+      "https://api.unitribe.app/ut/api/user/bio",
+      { bio_description: bio },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000,
+      }
+    );
+
+    return data;
+  } catch (error) {
+    handleAPIError(error, "updateBio");
+  }
+}
+
+/**
+ * Updates the user's name
+ * @param name - New name (required)
+ * @param token - Authentication token (required)
+ * @returns Updated user data
+ */
+export async function updateName(name: string, token: string): Promise<User> {
+  if (!token?.trim()) {
+    throw new ValidationError("Authentication token is required");
+  }
+
+  try {
+    const { data } = await axios.put<User>(
+      "https://api.unitribe.app/ut/api/user/name",
+      { name },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000,
+      }
+    );
+
+    return data;
+  } catch (error) {
+    handleAPIError(error, "updateName");
+  }
+}
+

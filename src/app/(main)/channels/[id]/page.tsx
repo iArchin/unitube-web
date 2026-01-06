@@ -4,13 +4,14 @@ import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dot } from "lucide-react";
+import { Dot, Pencil } from "lucide-react";
 import { fetchUserVideos } from "@/lib/api";
 import { Video } from "../../../../../types/custom_types";
 import { RootState } from "@/store/store";
 import { formatCount } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import Thumbnail from "@/components/Thumbnail";
+import EditProfileModal from "@/components/EditProfileModal";
 
 const ChannelPage = () => {
   const { id } = useParams();
@@ -23,12 +24,15 @@ const ChannelPage = () => {
   const [hasMore, setHasMore] = useState(false);
   const [totalVideos, setTotalVideos] = useState(0);
   const [activeTab, setActiveTab] = useState<"videos" | "shorts">("videos");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // User profile info from first video (if available)
   const [userProfile, setUserProfile] = useState<{
     name: string;
     email: string;
     userId: string;
+    profileImage?: string | null;
+    bio?: string | null;
   } | null>(null);
 
   // Handle "me" route - redirect to current user's channel
@@ -88,6 +92,8 @@ const ChannelPage = () => {
             name: result.videos[0].user.name,
             email: result.videos[0].user.email,
             userId: result.videos[0].channel.channelId,
+            profileImage: result.videos[0].user.profile_image,
+            bio: result.videos[0].user.bio_description,
           });
         } else if (result.videos.length > 0) {
           // Fallback to channel info if user info not available
@@ -95,6 +101,8 @@ const ChannelPage = () => {
             name: result.videos[0].channel.channelTitle,
             email: "",
             userId: result.videos[0].channel.channelId,
+            profileImage: null,
+            bio: null,
           });
         }
       } catch (err) {
@@ -128,6 +136,12 @@ const ChannelPage = () => {
   const actualUserId = id === "me" ? currentUser?.id?.toString() : id;
   const isCurrentUser = currentUser?.id.toString() === actualUserId;
 
+  // Final display data (use Redux for current user to reflect live updates)
+  const displayName = isCurrentUser ? currentUser?.name : userProfile?.name;
+  const displayEmail = isCurrentUser ? currentUser?.email : userProfile?.email;
+  const displayImage = isCurrentUser ? currentUser?.profile_image : userProfile?.profileImage;
+  const displayBio = isCurrentUser ? currentUser?.bio_description : userProfile?.bio;
+
   // Filter videos by type based on active tab
   const longVideos = videos.filter(
     (v) => !v.video_type || v.video_type !== "short"
@@ -143,8 +157,9 @@ const ChannelPage = () => {
           <div className="mb-10 flex flex-col md:flex-row items-center space-x-5">
             <Skeleton className="w-28 h-28 rounded-full" />
             <div className="flex-1 space-y-3">
-              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-10 w-64" />
               <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-4 w-full max-w-xl" />
             </div>
           </div>
           {/* Videos Grid Skeleton */}
@@ -179,33 +194,40 @@ const ChannelPage = () => {
       <div className="max-w-7xl mx-auto">
         {/* Profile Header */}
         <div className="mb-10 flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-5 px-3">
-          <Avatar className="w-28 h-28 flex-shrink-0">
+          <Avatar className="w-28 h-28 flex-shrink-0 border-2 border-purple-500/20">
             <AvatarImage
-              src={
-                userProfile
-                  ? `https://via.placeholder.com/112x112/6366f1/ffffff?text=${getInitials(
-                      userProfile.name
-                    )}`
-                  : undefined
-              }
-              alt={userProfile?.name || "User"}
+              src={displayImage || undefined}
+              alt={displayName || "User"}
+              className="object-cover"
             />
             <AvatarFallback className="text-3xl bg-purple-500 text-white">
-              {userProfile ? getInitials(userProfile.name) : "U"}
+              {displayName ? getInitials(displayName) : "U"}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 text-center md:text-left">
-            <h2 className="font-bold text-3xl md:text-5xl mb-2 text-foreground">
-              {userProfile?.name || "User Channel"}
-            </h2>
-            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-sm text-muted-foreground">
+            <div className="flex flex-col md:flex-row md:items-center gap-3 mb-2 justify-center md:justify-start">
+              <h2 className="font-bold text-3xl md:text-5xl text-foreground">
+                {displayName || "User Channel"}
+              </h2>
+              {isCurrentUser && (
+                <button
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="p-2 hover:bg-[#2a2a2a] rounded-full transition-colors text-purple-400"
+                  title="Edit Profile"
+                >
+                  <Pencil size={20} />
+                </button>
+              )}
+            </div>
+            
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-sm text-muted-foreground mb-3">
               <span className="flex items-center">
                 {formatCount(totalVideos)} video{totalVideos !== 1 ? "s" : ""}
               </span>
-              {userProfile?.email && (
+              {displayEmail && (
                 <>
                   <Dot className="w-4 h-4" />
-                  <span>{userProfile.email}</span>
+                  <span>{displayEmail}</span>
                 </>
               )}
               {isCurrentUser && (
@@ -215,8 +237,19 @@ const ChannelPage = () => {
                 </>
               )}
             </div>
+
+            {displayBio && (
+              <p className="text-sm text-gray-400 max-w-2xl line-clamp-2 md:line-clamp-none">
+                {displayBio}
+              </p>
+            )}
           </div>
         </div>
+
+        <EditProfileModal 
+          open={isEditModalOpen} 
+          onOpenChange={setIsEditModalOpen} 
+        />
 
         {/* Tabs */}
         <div className="border-b border-gray-700 mb-6">

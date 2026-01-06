@@ -24,7 +24,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { logout } from "@/store/authSlice";
 
@@ -43,6 +43,7 @@ const ProfileDropdown = () => {
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger className="focus:outline-none">
         <Avatar className="w-8 h-8 cursor-pointer border-2 border-purple-500 hover:opacity-80 transition-opacity">
+          <AvatarImage src={user?.profile_image || undefined} className="object-cover" />
           <AvatarFallback className="bg-purple-500 text-white">
             {user?.name?.charAt(0).toUpperCase() || "U"}
           </AvatarFallback>
@@ -54,6 +55,7 @@ const ProfileDropdown = () => {
       >
         <div className="p-4 flex gap-4 border-b border-[#333]">
           <Avatar className="w-10 h-10 border border-purple-500">
+            <AvatarImage src={user?.profile_image || undefined} className="object-cover" />
             <AvatarFallback className="bg-purple-500 text-white">
               {user?.name?.charAt(0).toUpperCase() || "U"}
             </AvatarFallback>
