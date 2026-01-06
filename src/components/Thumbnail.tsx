@@ -50,7 +50,7 @@ const Thumbnail = ({ video }: { video: Video }) => {
         )}
       </div>
       <div className="flex space-x-2 py-3">
-        <Link 
+        <Link
           href={`/channels/${video.channel.channelId}`}
           onClick={(e) => e.stopPropagation()}
           className="flex-shrink-0"
@@ -67,7 +67,7 @@ const Thumbnail = ({ video }: { video: Video }) => {
           <h4 className="scroll-m-20 text-sm font-bold tracking-tight">
             {video.title.substring(0, 60)}
           </h4>
-          <Link 
+          <Link
             href={`/channels/${video.channel.channelId}`}
             onClick={(e) => e.stopPropagation()}
             className="text-xs text-background-dark dark:text-background-light hover:text-purple-400 transition-colors"
@@ -77,9 +77,7 @@ const Thumbnail = ({ video }: { video: Video }) => {
           <div className="flex text-xs dark:text-background-light text-background-dark">
             <p className="text-xs">{formatCount(+video.viewCount)}</p>{" "}
             <Dot className="w-4 h-4" />{" "}
-            <p className="text-xs">
-              {formatPublishedDate(video.publishedDate)}
-            </p>
+            <p className="text-xs">{formatPublishedDate(video.created_at)}</p>
           </div>
         </div>
       </div>

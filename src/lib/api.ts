@@ -196,7 +196,7 @@ export async function fetchSearchQuery(
             name: video.user.name,
             email: video.user.email,
           },
-          publishedDate: getRandomDate(),
+          created_at: getRandomDate(),
           download_link: video.download_link,
         } as Video;
       });
@@ -304,19 +304,27 @@ export interface CategoryVideoResponse {
   description: string;
   slug: string;
   videos: Array<{
-    user: any;
     id: number;
     title: string;
     description: string;
-    download_link: string | null;
-    poster: string | null;
     category_id: number;
     user_id: number;
+    created_at: string;
+    poster: string | null;
+    likes_count: number;
+    dislikes_count: number;
+    comments_count: number;
+    views_count: number;
     category: {
       id: number;
       title: string;
       description: string;
       slug: string;
+    };
+    user: {
+      id: number;
+      name: string;
+      email: string;
     };
   }>;
 }
@@ -436,7 +444,7 @@ export async function fetchVideoById(
         name: data.uploader.name,
         email: data.uploader.email,
       },
-      publishedDate: data.created_at,
+      created_at: data.created_at,
       download_link: data.download_link || null,
     } as Video;
   } catch (error) {
@@ -474,24 +482,6 @@ export async function fetchCategoriesWithVideos(
       );
     }
 
-    // Helper function to generate random view count
-    const getRandomViewCount = (): string => {
-      const views = Math.floor(Math.random() * 10000000) + 100; // Random between 100 and 10,000,100
-      return views.toString();
-    };
-
-    // Helper function to generate random date (within last 2 years)
-    const getRandomDate = (): string => {
-      const now = new Date();
-      const twoYearsAgo = new Date(
-        now.getTime() - 2 * 365 * 24 * 60 * 60 * 1000
-      );
-      const randomTime =
-        twoYearsAgo.getTime() +
-        Math.random() * (now.getTime() - twoYearsAgo.getTime());
-      return new Date(randomTime).toISOString();
-    };
-
     // Transform API response to CategoryWithVideos format
     return data.data.map((category) => ({
       id: category.id,
@@ -499,29 +489,33 @@ export async function fetchCategoriesWithVideos(
       description: category.description,
       slug: category.slug,
       videos: category.videos
-        // Filter out videos with null download_link
-        .filter((video) => video.download_link !== null)
+        // Filter out videos with null poster (no thumbnail available)
+        .filter((video) => video.poster !== null)
         .map((video) => {
           // Use poster image for thumbnail, fallback to placeholder if not available
           const thumbnail =
             video.poster ||
             `https://via.placeholder.com/320x180/6366f1/ffffff?text=${encodeURIComponent(
-              video.title.substring(0, 30)
+              (video.title || "Video").substring(0, 30)
             )}`;
+
+          // Generate channel image from user name initials
+          const userInitials =
+            video.user?.name?.substring(0, 2).toUpperCase() || "U";
 
           return {
             id: video.id.toString(),
             title: video.title || "Untitled Video",
             description: video.description || "",
             thumbnail,
-            viewCount: getRandomViewCount(),
+            viewCount: video.views_count?.toString() || "0",
             channel: {
               channelId: video.user_id.toString(),
-              channelTitle: video.user.name || "User Channel", // API doesn't provide channel name
-              channelImage: `https://via.placeholder.com/40x40/6366f1/ffffff?text=U${video.user_id}`, // Placeholder
+              channelTitle: video.user?.name || "User Channel",
+              channelImage: `https://via.placeholder.com/40x40/6366f1/ffffff?text=${userInitials}`,
             },
-            publishedDate: getRandomDate(),
-            download_link: video.download_link,
+            created_at: video.created_at, // API doesn't provide published date, using random date
+            download_link: null, // This endpoint doesn't provide download_link
           } as Video;
         }),
     }));
@@ -625,7 +619,7 @@ export async function fetchShortVideos(
           channelTitle: video.user.name || "User Channel", // API doesn't provide channel name
           channelImage: `https://via.placeholder.com/40x40/6366f1/ffffff?text=U${video.user_id}`, // Placeholder
         },
-        publishedDate: getRandomDate(),
+        created_at: getRandomDate(),
         download_link: video.download_link || null,
       } as Video;
     });
@@ -739,7 +733,7 @@ export async function fetchVideosByCategoryId(
             channelTitle: video.user.name || "User Channel", // API doesn't provide channel name
             channelImage: `https://via.placeholder.com/40x40/6366f1/ffffff?text=U${video.user_id}`, // Placeholder
           },
-          publishedDate: getRandomDate(),
+          created_at: getRandomDate(),
           download_link: video.download_link || null,
         } as Video;
       });
@@ -955,7 +949,7 @@ export async function fetchUserVideos(
             name: userName,
             email: userEmail,
           },
-          publishedDate: video.created_at,
+          created_at: video.created_at,
           download_link: video.video_link || null,
           video_type: video.video_type || "long",
         } as Video;

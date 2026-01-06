@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatCount, formatPublishedDate } from "@/lib/utils";
 
 const HorizontalThumbnail = ({ video }: { video: Video }) => {
+  console.log(video.created_at);
   // Build URL with download_link, title, and description as query parameters
   const params = new URLSearchParams();
   if (video.download_link) {
@@ -83,12 +84,10 @@ const HorizontalThumbnail = ({ video }: { video: Video }) => {
           >
             {video.channel.channelTitle}
           </Link>
-          <div className="flex text-xs dark:text-background-light text-background-dark">
-            <p className="text-xs">{formatCount(+video.viewCount)}</p>{" "}
+          <div className="flex text-xs dark:text-background-light text-background-dark items-center">
+            <p className="text-xs">{formatCount(+video.viewCount)} views</p>{" "}
             <Dot className="w-3 h-3" />{" "}
-            <p className="text-xs">
-              {formatPublishedDate(video.publishedDate)}
-            </p>
+            <p className="text-xs">{formatPublishedDate(video.created_at)}</p>
           </div>
         </div>
       </div>

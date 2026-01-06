@@ -13,7 +13,7 @@ export type Video = {
     name: string;
     email: string;
   };
-  publishedDate: string;
+  created_at: string;
   download_link?: string | null;
   video_type?: string;
 };
