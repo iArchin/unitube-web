@@ -36,6 +36,7 @@ import {
   fetchVideoById,
   fetchVideoComments,
   createComment,
+  registerVideoView,
   Comment,
 } from "@/lib/api";
 import { Video } from "../../../../types/custom_types";
@@ -86,6 +87,12 @@ const ShortsPage = () => {
   const initialLoadDone = useRef<boolean>(false);
   const minSwipeDistance = 50; // Minimum distance for a swipe
   const maxSwipeTime = 500; // Maximum time for a swipe (ms)
+
+  // View tracking state - tracks which video IDs have been registered
+  const [registeredViews, setRegisteredViews] = useState<Set<string>>(
+    new Set()
+  );
+  const viewRegistrationInProgressRef = useRef<Set<string>>(new Set());
 
   // Store initial video ID from URL (only on first load)
   const initialVideoId = useRef<string | null>(null);
@@ -352,6 +359,47 @@ const ShortsPage = () => {
     });
   };
 
+  // Handle video progress for view tracking
+  const handleVideoProgress = useCallback(
+    async (
+      videoId: string,
+      state: {
+        played: number;
+        playedSeconds: number;
+        loaded: number;
+        loadedSeconds: number;
+      }
+    ) => {
+      // Skip if view already registered or registration in progress
+      if (
+        registeredViews.has(videoId) ||
+        viewRegistrationInProgressRef.current.has(videoId)
+      ) {
+        return;
+      }
+
+      // Check if tab is visible
+      if (document.hidden) {
+        return;
+      }
+
+      // Check if user has watched at least 10% of the video
+      if (state.played >= 0.1) {
+        viewRegistrationInProgressRef.current.add(videoId);
+        try {
+          await registerVideoView(videoId);
+          setRegisteredViews((prev) => new Set(prev).add(videoId));
+          console.log("View registered for short:", videoId);
+        } catch (error) {
+          console.error("Failed to register view:", error);
+          // Remove from in-progress to allow retry on error
+          viewRegistrationInProgressRef.current.delete(videoId);
+        }
+      }
+    },
+    [registeredViews]
+  );
+
   // Convert API comment to UI comment
   const convertCommentToUI = (comment: Comment): CommentUI => {
     const authorName = comment.user?.name || "Anonymous";
@@ -609,6 +657,8 @@ const ShortsPage = () => {
                     muted={false}
                     playsinline={true}
                     style={{ position: "absolute", top: 0, left: 0 }}
+                    onProgress={(state) => handleVideoProgress(short.id, state)}
+                    progressInterval={1000}
                     config={{
                       file: {
                         attributes: {

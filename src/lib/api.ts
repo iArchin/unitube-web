@@ -1031,6 +1031,34 @@ export async function dislikeVideo(
   }
 }
 
+/**
+ * Registers a view for a video
+ * Called when user watches at least 10% of the video duration while tab is visible
+ * @param videoId - Video ID (required)
+ * @returns API response
+ */
+export async function registerVideoView(
+  videoId: string | number
+): Promise<any> {
+  if (!videoId) {
+    throw new ValidationError("Video ID cannot be empty");
+  }
+
+  try {
+    const { data } = await axios.post(
+      `https://api.unitribe.app/ut/api/videos/${videoId}/view`,
+      {},
+      {
+        timeout: 10000,
+      }
+    );
+
+    return data;
+  } catch (error) {
+    handleAPIError(error, "registerVideoView");
+  }
+}
+
 // Comment API response types
 export interface Comment {
   id: number;

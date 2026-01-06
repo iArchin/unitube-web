@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useSelector } from "react-redux";
 import Link from "next/link";
@@ -19,6 +19,7 @@ import {
   dislikeVideo,
   fetchVideoComments,
   createComment,
+  registerVideoView,
   Comment as APIComment,
 } from "@/lib/api";
 import { RootState } from "@/store/store";
@@ -112,8 +113,55 @@ const VideoDetails = () => {
   const [relatedVideos, setRelatedVideos] = useState<Video[]>([]);
   const [relatedVideosLoading, setRelatedVideosLoading] = useState(false);
 
+  // View tracking state
+  const [viewRegistered, setViewRegistered] = useState(false);
+  const videoDurationRef = useRef<number>(0);
+  const viewRegistrationInProgressRef = useRef(false);
+
   useEffect(() => {
     setIsMounted(true);
+  }, []);
+
+  // Reset view tracking when video ID changes
+  useEffect(() => {
+    setViewRegistered(false);
+    videoDurationRef.current = 0;
+    viewRegistrationInProgressRef.current = false;
+  }, [id]);
+
+  // Handle video progress for view tracking
+  const handleProgress = useCallback(
+    async (state: { played: number; playedSeconds: number; loaded: number; loadedSeconds: number }) => {
+      // Skip if view already registered or registration in progress
+      if (viewRegistered || viewRegistrationInProgressRef.current || !id) {
+        return;
+      }
+
+      // Check if tab is visible
+      if (document.hidden) {
+        return;
+      }
+
+      // Check if user has watched at least 10% of the video
+      if (state.played >= 0.1) {
+        viewRegistrationInProgressRef.current = true;
+        try {
+          await registerVideoView(id as string);
+          setViewRegistered(true);
+          console.log("View registered for video:", id);
+        } catch (error) {
+          console.error("Failed to register view:", error);
+          // Reset flag to allow retry on error
+          viewRegistrationInProgressRef.current = false;
+        }
+      }
+    },
+    [viewRegistered, id]
+  );
+
+  // Handle video duration
+  const handleDuration = useCallback((duration: number) => {
+    videoDurationRef.current = duration;
   }, []);
 
   useEffect(() => {
@@ -475,6 +523,9 @@ const VideoDetails = () => {
                     height="100%"
                     playing={false}
                     controls={true}
+                    onProgress={handleProgress}
+                    onDuration={handleDuration}
+                    progressInterval={1000}
                     config={{
                       file: {
                         attributes: {
