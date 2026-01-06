@@ -138,19 +138,21 @@ export function generateMockVideos(count: number, category: string): Video[] {
     },
   };
 
-  const categoryData = categories[category as keyof typeof categories] || categories.trending;
+  const categoryData =
+    categories[category as keyof typeof categories] || categories.trending;
 
   for (let i = 0; i < count; i++) {
     const titleIndex = i % categoryData.titles.length;
     const videoNumber = Math.floor(i / categoryData.titles.length) + 1;
-    const title = videoNumber > 1 
-      ? `${categoryData.titles[titleIndex]} ${videoNumber}`
-      : categoryData.titles[titleIndex];
-    
+    const title =
+      videoNumber > 1
+        ? `${categoryData.titles[titleIndex]} ${videoNumber}`
+        : categoryData.titles[titleIndex];
+
     // Use vertical aspect ratio for shorts (9:16), horizontal for others (16:9)
     const thumbnailWidth = category === "shorts" ? 180 : 320;
     const thumbnailHeight = category === "shorts" ? 320 : 180;
-    
+
     videos.push({
       id: `${category}-video-${i + 1}`,
       title: title,
@@ -162,7 +164,9 @@ export function generateMockVideos(count: number, category: string): Video[] {
         channelTitle: categoryData.channels[titleIndex],
         channelImage: `https://picsum.photos/seed/${category}-channel-${i}/40/40`,
       },
-      publishedDate: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+      created_at: new Date(
+        Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000
+      ).toISOString(),
     });
   }
 
