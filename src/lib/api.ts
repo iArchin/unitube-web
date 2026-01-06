@@ -1030,3 +1030,135 @@ export async function dislikeVideo(
     handleAPIError(error, "dislikeVideo");
   }
 }
+
+// Comment API response types
+export interface Comment {
+  id: number;
+  user_id: number;
+  video_id: number;
+  body: string;
+  status: boolean;
+  created_at: string;
+  updated_at: string;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+  };
+}
+
+export interface CommentsResponse {
+  status: boolean;
+  comments: {
+    current_page: number;
+    data: Comment[];
+    first_page_url: string;
+    from: number;
+    last_page: number;
+    last_page_url: string;
+    links: Array<{
+      url: string | null;
+      label: string;
+      page: number | null;
+      active: boolean;
+    }>;
+    next_page_url: string | null;
+    path: string;
+    per_page: number;
+    prev_page_url: string | null;
+    to: number;
+    total: number;
+  };
+}
+
+/**
+ * Fetches comments for a video or short
+ * @param videoId - Video ID (required)
+ * @param token - Authentication token (required)
+ * @param page - Page number (default: 1)
+ * @param size - Number of comments per page (default: 50)
+ * @returns Comments response with pagination
+ */
+export async function fetchVideoComments(
+  videoId: string | number,
+  token: string,
+  page: number = 1,
+  size: number = 50
+): Promise<CommentsResponse> {
+  if (!videoId) {
+    throw new ValidationError("Video ID cannot be empty");
+  }
+
+  if (!token?.trim()) {
+    throw new ValidationError("Authentication token is required");
+  }
+
+  try {
+    const { data } = await axios.get<CommentsResponse>(
+      `https://api.unitribe.app/ut/api/videos/${videoId}/comments`,
+      {
+        params: {
+          page,
+          size,
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000,
+      }
+    );
+
+    if (!data || !data.status || !data.comments) {
+      throw new ValidationError("Invalid response structure from comments API");
+    }
+
+    return data;
+  } catch (error) {
+    handleAPIError(error, "fetchVideoComments");
+  }
+}
+
+/**
+ * Creates a new comment on a video or short
+ * @param videoId - Video ID (required)
+ * @param body - Comment text (required)
+ * @param token - Authentication token (required)
+ * @returns Created comment data
+ */
+export async function createComment(
+  videoId: string | number,
+  body: string,
+  token: string
+): Promise<Comment> {
+  if (!videoId) {
+    throw new ValidationError("Video ID cannot be empty");
+  }
+
+  if (!body?.trim()) {
+    throw new ValidationError("Comment body cannot be empty");
+  }
+
+  if (!token?.trim()) {
+    throw new ValidationError("Authentication token is required");
+  }
+
+  try {
+    const { data } = await axios.post<Comment>(
+      `https://api.unitribe.app/ut/api/comments/new`,
+      {
+        video_id: videoId,
+        body: body.trim(),
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000,
+      }
+    );
+
+    return data;
+  } catch (error) {
+    handleAPIError(error, "createComment");
+  }
+}

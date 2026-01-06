@@ -17,11 +17,14 @@ import {
   GetVideoResponse,
   likeVideo,
   dislikeVideo,
+  fetchVideoComments,
+  createComment,
+  Comment as APIComment,
 } from "@/lib/api";
 import { RootState } from "@/store/store";
 import axios from "axios";
 
-// Comment type
+// Comment type for UI
 interface Comment {
   id: number;
   author: string;
@@ -33,6 +36,48 @@ interface Comment {
   userLiked?: boolean;
   userDisliked?: boolean;
 }
+
+// Convert API comment to UI comment
+const convertCommentToUI = (comment: APIComment): Comment => {
+  const authorName = comment.user?.name || "Anonymous";
+  const authorInitials =
+    authorName
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "AN";
+
+  // Calculate time ago
+  const commentDate = new Date(comment.created_at);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - commentDate.getTime()) / 1000);
+  let timeAgo = "";
+  if (diffInSeconds < 60) {
+    timeAgo = "just now";
+  } else if (diffInSeconds < 3600) {
+    const minutes = Math.floor(diffInSeconds / 60);
+    timeAgo = `${minutes} minute${minutes !== 1 ? "s" : ""} ago`;
+  } else if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600);
+    timeAgo = `${hours} hour${hours !== 1 ? "s" : ""} ago`;
+  } else {
+    const days = Math.floor(diffInSeconds / 86400);
+    timeAgo = `${days} day${days !== 1 ? "s" : ""} ago`;
+  }
+
+  return {
+    id: comment.id,
+    author: authorName,
+    avatar: authorInitials,
+    text: comment.body,
+    likes: comment.likes_count || 0,
+    dislikes: comment.dislikes_count || 0,
+    timeAgo,
+    userLiked: false,
+    userDisliked: false,
+  };
+};
 
 // Dynamically import react-player to avoid SSR issues
 // Use react-player (not youtube-specific) to support file URLs
@@ -58,6 +103,12 @@ const VideoDetails = () => {
   const [liking, setLiking] = useState(false);
   const [disliking, setDisliking] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(true); // Start as true to prevent "No comments" flash
+  const [commentsPage, setCommentsPage] = useState(1);
+  const [hasMoreComments, setHasMoreComments] = useState(false);
+  const [commentsTotal, setCommentsTotal] = useState(0);
+  const [loadingMoreComments, setLoadingMoreComments] = useState(false);
+  const [submittingComment, setSubmittingComment] = useState(false);
   const [relatedVideos, setRelatedVideos] = useState<Video[]>([]);
   const [relatedVideosLoading, setRelatedVideosLoading] = useState(false);
 
@@ -76,6 +127,10 @@ const VideoDetails = () => {
       try {
         setLoading(true);
         setError(null);
+        // Set comments loading to true if we have a token (will load comments)
+        if (token) {
+          setCommentsLoading(true);
+        }
 
         // Fetch raw API response to get all fields including counts
         const headers: Record<string, string> = {};
@@ -127,10 +182,43 @@ const VideoDetails = () => {
             setRelatedVideosLoading(false);
           }
         }
+
+        // Fetch comments if token is available
+        if (token) {
+          try {
+            setCommentsPage(1);
+            const commentsResponse = await fetchVideoComments(
+              id as string,
+              token,
+              1,
+              50
+            );
+            const uiComments = commentsResponse.comments.data.map(
+              convertCommentToUI
+            );
+            setComments(uiComments);
+            setHasMoreComments(
+              commentsResponse.comments.current_page <
+                commentsResponse.comments.last_page
+            );
+            setCommentsTotal(commentsResponse.comments.total);
+          } catch (commentsErr) {
+            console.error("Failed to fetch comments:", commentsErr);
+            setComments([]);
+            setHasMoreComments(false);
+            setCommentsTotal(0);
+          } finally {
+            setCommentsLoading(false);
+          }
+        } else {
+          // If no token, set loading to false so we don't show loading state
+          setCommentsLoading(false);
+        }
       } catch (err) {
         console.error("Failed to fetch video:", err);
         setError(err instanceof Error ? err.message : "Failed to load video");
         // Don't set fallback - videoDetails remains null
+        setCommentsLoading(false);
       } finally {
         setLoading(false);
       }
@@ -241,33 +329,60 @@ const VideoDetails = () => {
     }
   };
 
+  // Load more comments
+  const loadMoreComments = async () => {
+    if (!id || !token || loadingMoreComments || !hasMoreComments) {
+      return;
+    }
+
+    try {
+      setLoadingMoreComments(true);
+      const nextPage = commentsPage + 1;
+      const response = await fetchVideoComments(
+        id as string,
+        token,
+        nextPage,
+        50
+      );
+      const newComments = response.comments.data.map(convertCommentToUI);
+      setComments((prev) => [...prev, ...newComments]);
+      setCommentsPage(nextPage);
+      setHasMoreComments(
+        response.comments.current_page < response.comments.last_page
+      );
+    } catch (err) {
+      console.error("Failed to load more comments:", err);
+    } finally {
+      setLoadingMoreComments(false);
+    }
+  };
+
   // Handle comment submission
-  const handleCommentSubmit = () => {
-    if (!newComment.trim()) return;
+  const handleCommentSubmit = async () => {
+    if (!newComment.trim() || !token || !id || submittingComment) {
+      if (!token) {
+        alert("Please login to comment");
+      }
+      return;
+    }
 
-    const authorName = user?.name || "Anonymous";
-    const authorInitials =
-      authorName
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2) || "AN";
-
-    const newCommentObj: Comment = {
-      id: Date.now(),
-      author: authorName,
-      avatar: authorInitials,
-      text: newComment.trim(),
-      likes: 0,
-      dislikes: 0,
-      timeAgo: "just now",
-      userLiked: false,
-      userDisliked: false,
-    };
-
-    setComments((prev) => [newCommentObj, ...prev]);
-    setNewComment("");
+    try {
+      setSubmittingComment(true);
+      const createdComment = await createComment(
+        id as string,
+        newComment,
+        token
+      );
+      const uiComment = convertCommentToUI(createdComment);
+      setComments((prev) => [uiComment, ...prev]);
+      setCommentsTotal((prev) => prev + 1);
+      setNewComment("");
+    } catch (error) {
+      console.error("Failed to submit comment:", error);
+      alert("Failed to submit comment. Please try again.");
+    } finally {
+      setSubmittingComment(false);
+    }
   };
 
   // Handle comment like/dislike
@@ -507,7 +622,9 @@ const VideoDetails = () => {
             {/* Comments Section */}
             <div className="mt-6">
               <h4 className="text-lg font-semibold mb-6 text-white">
-                {apiResponse
+                {commentsTotal > 0
+                  ? `${commentsTotal} Comment${commentsTotal !== 1 ? "s" : ""}`
+                  : apiResponse
                   ? `${apiResponse.comments_count || 0} Comment${
                       (apiResponse.comments_count || 0) !== 1 ? "s" : ""
                     }`
@@ -517,105 +634,137 @@ const VideoDetails = () => {
               </h4>
 
               {/* Add Comment Input */}
-              <div className="mb-6">
-                <div className="flex space-x-3">
-                  <Avatar className="w-10 h-10 flex-shrink-0">
-                    <AvatarFallback className="bg-blue-500 text-white">
-                      {user?.name
-                        ?.split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .toUpperCase()
-                        .slice(0, 2) || "AN"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <textarea
-                      placeholder="Add a comment..."
-                      value={newComment}
-                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                        setNewComment(e.target.value)
-                      }
-                      className="w-full min-h-[80px] p-3 border border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[#1a1a1a] text-white placeholder-gray-400"
-                    />
-                    <div className="flex justify-end space-x-2 mt-2">
-                      {newComment.trim() && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setNewComment("")}
-                          className="text-gray-400 hover:text-white"
-                        >
-                          Clear
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        onClick={handleCommentSubmit}
-                        disabled={!newComment.trim()}
-                        className="bg-purple-500 hover:bg-purple-700 text-white"
-                      >
-                        Comment
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Comments List */}
-              <div className="space-y-6">
-                {comments.map((comment) => (
-                  <div key={comment.id} className="flex space-x-3">
+              {token ? (
+                <div className="mb-6">
+                  <div className="flex space-x-3">
                     <Avatar className="w-10 h-10 flex-shrink-0">
-                      <AvatarFallback className="bg-gray-600 text-white">
-                        {comment.avatar}
+                      <AvatarFallback className="bg-blue-500 text-white">
+                        {user?.name
+                          ?.split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()
+                          .slice(0, 2) || "AN"}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-semibold text-sm text-white">
-                          {comment.author}
-                        </p>
-                        <span className="text-[9px] text-gray-400">
-                          {comment.timeAgo}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-300 mb-2 leading-relaxed">
-                        {comment.text}
-                      </p>
-                      <div className="flex items-center space-x-4">
-                        <button
-                          onClick={() => handleCommentLike(comment.id)}
-                          className={`flex items-center space-x-1 text-xs transition-colors ${
-                            comment.userLiked
-                              ? "text-blue-400"
-                              : "text-gray-400 hover:text-blue-400"
-                          }`}
+                      <textarea
+                        placeholder="Add a comment..."
+                        value={newComment}
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                          setNewComment(e.target.value)
+                        }
+                        className="w-full min-h-[80px] p-3 border border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[#1a1a1a] text-white placeholder-gray-400"
+                      />
+                      <div className="flex justify-end space-x-2 mt-2">
+                        {newComment.trim() && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setNewComment("")}
+                            className="text-gray-400 hover:text-white"
+                          >
+                            Clear
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          onClick={handleCommentSubmit}
+                          disabled={!newComment.trim() || submittingComment}
+                          className="bg-purple-500 hover:bg-purple-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                          <ThumbsUp className="w-4 h-4" />
-                          <span>{formatCount(comment.likes)}</span>
-                        </button>
-                        <button
-                          onClick={() => handleCommentDislike(comment.id)}
-                          className={`flex items-center space-x-1 text-xs transition-colors ${
-                            comment.userDisliked
-                              ? "text-red-400"
-                              : "text-gray-400 hover:text-red-400"
-                          }`}
-                        >
-                          <ThumbsDown className="w-4 h-4" />
-                          {comment.dislikes > 0 && (
-                            <span>{formatCount(comment.dislikes)}</span>
-                          )}
-                        </button>
-                        <button className="text-xs text-gray-400 hover:text-white transition-colors">
-                          Reply
-                        </button>
+                          {submittingComment ? "Posting..." : "Comment"}
+                        </Button>
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ) : (
+                <div className="mb-6 p-4 bg-[#1a1a1a] rounded-lg text-center">
+                  <p className="text-gray-400 text-sm">
+                    Please login to comment
+                  </p>
+                </div>
+              )}
+
+              {/* Comments List */}
+              {commentsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <p className="text-gray-400 text-sm">Loading comments...</p>
+                </div>
+              ) : comments.length === 0 ? (
+                <div className="flex items-center justify-center py-8">
+                  <p className="text-gray-400 text-sm">No comments yet</p>
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-6">
+                    {comments.map((comment) => (
+                      <div key={comment.id} className="flex space-x-3">
+                        <Avatar className="w-10 h-10 flex-shrink-0">
+                          <AvatarFallback className="bg-gray-600 text-white">
+                            {comment.avatar}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <p className="font-semibold text-sm text-white">
+                              {comment.author}
+                            </p>
+                            <span className="text-[9px] text-gray-400">
+                              {comment.timeAgo}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-300 mb-2 leading-relaxed">
+                            {comment.text}
+                          </p>
+                          <div className="flex items-center space-x-4">
+                            <button
+                              onClick={() => handleCommentLike(comment.id)}
+                              className={`flex items-center space-x-1 text-xs transition-colors ${
+                                comment.userLiked
+                                  ? "text-blue-400"
+                                  : "text-gray-400 hover:text-blue-400"
+                              }`}
+                            >
+                              <ThumbsUp className="w-4 h-4" />
+                              <span>{formatCount(comment.likes)}</span>
+                            </button>
+                            <button
+                              onClick={() => handleCommentDislike(comment.id)}
+                              className={`flex items-center space-x-1 text-xs transition-colors ${
+                                comment.userDisliked
+                                  ? "text-red-400"
+                                  : "text-gray-400 hover:text-red-400"
+                              }`}
+                            >
+                              <ThumbsDown className="w-4 h-4" />
+                              {comment.dislikes > 0 && (
+                                <span>{formatCount(comment.dislikes)}</span>
+                              )}
+                            </button>
+                            <button className="text-xs text-gray-400 hover:text-white transition-colors">
+                              Reply
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {hasMoreComments && (
+                    <div className="flex justify-center pt-6">
+                      <Button
+                        onClick={loadMoreComments}
+                        disabled={loadingMoreComments}
+                        variant="outline"
+                        className="bg-[#1a1a1a] border-gray-700 text-white hover:bg-[#2a2a2a] disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {loadingMoreComments ? "Loading..." : "See more"}
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           </div>
 

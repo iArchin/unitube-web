@@ -31,7 +31,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { fetchShortVideos, fetchVideoById } from "@/lib/api";
+import {
+  fetchShortVideos,
+  fetchVideoById,
+  fetchVideoComments,
+  createComment,
+  Comment,
+} from "@/lib/api";
 import { Video } from "../../../../types/custom_types";
 import { RootState } from "@/store/store";
 import { formatCount, formatPublishedDate } from "@/lib/utils";
@@ -41,33 +47,15 @@ const ReactPlayer = dynamic(() => import("react-player"), {
   ssr: false,
 });
 
-// Default comments data
-const defaultComments = [
-  {
-    id: 1,
-    author: "John Doe",
-    avatar: "JD",
-    text: "This is amazing! 🔥",
-    likes: 124,
-    timeAgo: "2 hours ago",
-  },
-  {
-    id: 2,
-    author: "Sarah Miller",
-    avatar: "SM",
-    text: "Love this content!",
-    likes: 89,
-    timeAgo: "5 hours ago",
-  },
-  {
-    id: 3,
-    author: "Mike Wilson",
-    avatar: "MW",
-    text: "Keep it up! 👏",
-    likes: 156,
-    timeAgo: "1 day ago",
-  },
-];
+// Comment interface for UI
+interface CommentUI {
+  id: number;
+  author: string;
+  avatar: string;
+  text: string;
+  likes: number;
+  timeAgo: string;
+}
 
 const ShortsPage = () => {
   const token = useSelector((state: RootState) => state.auth.token);
@@ -81,6 +69,14 @@ const ShortsPage = () => {
   const [playingVideos, setPlayingVideos] = useState<Set<number>>(new Set([0]));
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
+  const [comments, setComments] = useState<CommentUI[]>([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentsPage, setCommentsPage] = useState(1);
+  const [hasMoreComments, setHasMoreComments] = useState(false);
+  const [commentsTotal, setCommentsTotal] = useState(0);
+  const [loadingMoreComments, setLoadingMoreComments] = useState(false);
+  const [newComment, setNewComment] = useState("");
+  const [submittingComment, setSubmittingComment] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<(HTMLDivElement | null)[]>([]);
   const touchStartY = useRef<number>(0);
@@ -356,10 +352,155 @@ const ShortsPage = () => {
     });
   };
 
+  // Convert API comment to UI comment
+  const convertCommentToUI = (comment: Comment): CommentUI => {
+    const authorName = comment.user?.name || "Anonymous";
+    const authorInitials =
+      authorName
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2) || "AN";
+
+    // Calculate time ago
+    const commentDate = new Date(comment.created_at);
+    const now = new Date();
+    const diffInSeconds = Math.floor(
+      (now.getTime() - commentDate.getTime()) / 1000
+    );
+    let timeAgo = "";
+    if (diffInSeconds < 60) {
+      timeAgo = "just now";
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60);
+      timeAgo = `${minutes} minute${minutes !== 1 ? "s" : ""} ago`;
+    } else if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600);
+      timeAgo = `${hours} hour${hours !== 1 ? "s" : ""} ago`;
+    } else {
+      const days = Math.floor(diffInSeconds / 86400);
+      timeAgo = `${days} day${days !== 1 ? "s" : ""} ago`;
+    }
+
+    return {
+      id: comment.id,
+      author: authorName,
+      avatar: authorInitials,
+      text: comment.body,
+      likes: 0, // API doesn't return likes_count for comments
+      timeAgo,
+    };
+  };
+
+  // Fetch comments when dialog opens
+  useEffect(() => {
+    const loadComments = async () => {
+      if (!commentsOpen || !selectedVideoId || !token) {
+        return;
+      }
+
+      try {
+        setCommentsLoading(true);
+        setCommentsPage(1);
+        const response = await fetchVideoComments(
+          selectedVideoId,
+          token,
+          1,
+          50
+        );
+        const uiComments = response.comments.data.map(convertCommentToUI);
+        setComments(uiComments);
+        setHasMoreComments(
+          response.comments.current_page < response.comments.last_page
+        );
+        setCommentsTotal(response.comments.total);
+      } catch (err) {
+        console.error("Failed to fetch comments:", err);
+        setComments([]);
+        setHasMoreComments(false);
+        setCommentsTotal(0);
+      } finally {
+        setCommentsLoading(false);
+      }
+    };
+
+    loadComments();
+  }, [commentsOpen, selectedVideoId, token]);
+
+  // Load more comments
+  const loadMoreComments = async () => {
+    if (!selectedVideoId || !token || loadingMoreComments || !hasMoreComments) {
+      return;
+    }
+
+    try {
+      setLoadingMoreComments(true);
+      const nextPage = commentsPage + 1;
+      const response = await fetchVideoComments(
+        selectedVideoId,
+        token,
+        nextPage,
+        50
+      );
+      const newComments = response.comments.data.map(convertCommentToUI);
+      setComments((prev) => [...prev, ...newComments]);
+      setCommentsPage(nextPage);
+      setHasMoreComments(
+        response.comments.current_page < response.comments.last_page
+      );
+    } catch (err) {
+      console.error("Failed to load more comments:", err);
+    } finally {
+      setLoadingMoreComments(false);
+    }
+  };
+
   const openComments = (e: React.MouseEvent, videoId: string) => {
     e.stopPropagation();
     setSelectedVideoId(videoId);
     setCommentsOpen(true);
+    // Reset comments when opening dialog
+    setComments([]);
+    setCommentsPage(1);
+    setHasMoreComments(false);
+    setCommentsTotal(0);
+  };
+
+  const handleCommentsDialogChange = (open: boolean) => {
+    setCommentsOpen(open);
+    if (!open) {
+      // Reset state when dialog closes
+      setSelectedVideoId(null);
+      setComments([]);
+      setNewComment("");
+      setCommentsPage(1);
+      setHasMoreComments(false);
+      setCommentsTotal(0);
+    }
+  };
+
+  const handleCommentSubmit = async () => {
+    if (!newComment.trim() || !selectedVideoId || !token || submittingComment) {
+      return;
+    }
+
+    try {
+      setSubmittingComment(true);
+      const createdComment = await createComment(
+        selectedVideoId,
+        newComment,
+        token
+      );
+      const uiComment = convertCommentToUI(createdComment);
+      setComments((prev) => [uiComment, ...prev]);
+      setNewComment("");
+    } catch (err) {
+      console.error("Failed to submit comment:", err);
+      alert("Failed to submit comment. Please try again.");
+    } finally {
+      setSubmittingComment(false);
+    }
   };
 
   const handleShare = (e: React.MouseEvent, videoId: string) => {
@@ -558,7 +699,7 @@ const ShortsPage = () => {
                   >
                     <MessageCircle className="w-4 h-4 md:w-5 md:h-5 text-white" />
                     <span className="text-xs md:text-sm">
-                      {defaultComments.length}
+                      {comments.length}
                     </span>
                   </button>
 
@@ -625,69 +766,104 @@ const ShortsPage = () => {
       </div>
 
       {/* Comments Dialog */}
-      <Dialog open={commentsOpen} onOpenChange={setCommentsOpen}>
+      <Dialog open={commentsOpen} onOpenChange={handleCommentsDialogChange}>
         <DialogContent className="max-w-md max-h-[80vh] bg-[#1a1a1a] border-gray-800">
           <DialogHeader>
             <DialogTitle className="text-white">
-              Comments ({defaultComments.length})
+              Comments ({commentsTotal > 0 ? commentsTotal : comments.length})
             </DialogTitle>
           </DialogHeader>
           <div className="overflow-y-auto max-h-[60vh] space-y-4 pr-2">
-            {defaultComments.map((comment) => (
-              <div key={comment.id} className="flex gap-3">
+            {commentsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-gray-400 text-sm">Loading comments...</p>
+              </div>
+            ) : comments.length === 0 ? (
+              <div className="flex items-center justify-center py-8">
+                <p className="text-gray-400 text-sm">No comments yet</p>
+              </div>
+            ) : (
+              <>
+                {comments.map((comment) => (
+                  <div key={comment.id} className="flex gap-3">
+                    <Avatar className="w-10 h-10 flex-shrink-0">
+                      <AvatarFallback className="bg-gray-600 text-white text-xs">
+                        {comment.avatar}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="font-semibold text-sm text-white">
+                          {comment.author}
+                        </p>
+                        <span className="text-[9px] text-gray-400">
+                          {comment.timeAgo}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-300 mb-2 leading-relaxed">
+                        {comment.text}
+                      </p>
+                      <div className="flex items-center gap-4">
+                        <button className="flex items-center gap-1 text-xs hover:text-blue-400 transition-colors text-gray-400">
+                          <Heart className="w-4 h-4" />
+                          <span>{formatCount(comment.likes)}</span>
+                        </button>
+                        <button className="text-xs text-gray-400 hover:text-white transition-colors">
+                          Reply
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {hasMoreComments && (
+                  <div className="flex justify-center pt-4">
+                    <Button
+                      onClick={loadMoreComments}
+                      disabled={loadingMoreComments}
+                      variant="outline"
+                      className="bg-[#2a2a2a] border-gray-700 text-white hover:bg-[#3a3a3a] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {loadingMoreComments ? "Loading..." : "See more"}
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          {token && (
+            <div className="mt-4 pt-4 border-t border-gray-800">
+              <div className="flex gap-3">
                 <Avatar className="w-10 h-10 flex-shrink-0">
-                  <AvatarFallback className="bg-gray-600 text-white text-xs">
-                    {comment.avatar}
+                  <AvatarFallback className="bg-blue-500 text-white">
+                    {token ? "U" : "AB"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-semibold text-sm text-white">
-                      {comment.author}
-                    </p>
-                    <span className="text-[9px] text-gray-400">
-                      {comment.timeAgo}
-                    </span>
+                  <textarea
+                    placeholder="Add a comment..."
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    className="w-full min-h-[60px] p-3 border border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[#111111] text-white placeholder-gray-400 text-sm"
+                  />
+                  <div className="flex justify-end mt-2">
+                    <Button
+                      size="sm"
+                      onClick={handleCommentSubmit}
+                      disabled={!newComment.trim() || submittingComment}
+                      className="bg-purple-500 hover:bg-purple-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {submittingComment ? "Posting..." : "Comment"}
+                    </Button>
                   </div>
-                  <p className="text-sm text-gray-300 mb-2 leading-relaxed">
-                    {comment.text}
-                  </p>
-                  <div className="flex items-center gap-4">
-                    <button className="flex items-center gap-1 text-xs hover:text-blue-400 transition-colors text-gray-400">
-                      <Heart className="w-4 h-4" />
-                      <span>{formatCount(comment.likes)}</span>
-                    </button>
-                    <button className="text-xs text-gray-400 hover:text-white transition-colors">
-                      Reply
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 pt-4 border-t border-gray-800">
-            <div className="flex gap-3">
-              <Avatar className="w-10 h-10 flex-shrink-0">
-                <AvatarFallback className="bg-blue-500 text-white">
-                  AB
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1">
-                <textarea
-                  placeholder="Add a comment..."
-                  className="w-full min-h-[60px] p-3 border border-gray-600 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[#111111] text-white placeholder-gray-400 text-sm"
-                />
-                <div className="flex justify-end mt-2">
-                  <Button
-                    size="sm"
-                    className="bg-purple-500 hover:bg-purple-700 text-white"
-                  >
-                    Comment
-                  </Button>
                 </div>
               </div>
             </div>
-          </div>
+          )}
+          {!token && (
+            <div className="mt-4 pt-4 border-t border-gray-800 text-center">
+              <p className="text-gray-400 text-sm">Please login to comment</p>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
