@@ -10,8 +10,8 @@ const VerticalThumbnail = ({ video }: { video: Video }) => {
   const shortsUrl = `/shorts?id=${video.id}`;
 
   return (
-    <Link 
-      href={shortsUrl} 
+    <Link
+      href={shortsUrl}
       className="w-[180px] flex-shrink-0"
       draggable="false"
       onDragStart={(e) => e.preventDefault()}
@@ -28,12 +28,14 @@ const VerticalThumbnail = ({ video }: { video: Video }) => {
             onDragStart={(e) => e.preventDefault()}
             onError={(e) => {
               // Hide image on error, showing grey background
-              e.currentTarget.style.display = 'none';
+              e.currentTarget.style.display = "none";
             }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <span className="text-gray-500 dark:text-gray-400 text-xs">No thumbnail</span>
+            <span className="text-gray-500 dark:text-gray-400 text-xs">
+              No thumbnail
+            </span>
           </div>
         )}
       </div>
@@ -47,9 +49,7 @@ const VerticalThumbnail = ({ video }: { video: Video }) => {
         <div className="flex text-xs dark:text-background-light text-background-dark">
           <p className="text-xs">{formatCount(+video.viewCount)}</p>{" "}
           <Dot className="w-3 h-3" />{" "}
-          <p className="text-xs">
-            {formatPublishedDate(video.publishedDate)}
-          </p>
+          <p className="text-xs">{formatPublishedDate(video.created_at)}</p>
         </div>
       </div>
     </Link>
@@ -57,4 +57,3 @@ const VerticalThumbnail = ({ video }: { video: Video }) => {
 };
 
 export default VerticalThumbnail;
-
