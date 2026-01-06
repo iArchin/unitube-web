@@ -167,7 +167,7 @@ function TopStreamingContent() {
   }
 
   return (
-    <div className="min-h-screen py-4 px-2 md:px-8">
+    <div className="min-h-screen py-4 px-2 md:px-8 pt-32">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">
           {categoryTitle}

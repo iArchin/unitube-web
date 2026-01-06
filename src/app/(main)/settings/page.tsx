@@ -6,7 +6,7 @@ import { Separator } from "@/components/ui/separator";
 
 export default function SettingsPage() {
   return (
-    <div className="min-h-screen py-8 px-4 md:px-8">
+    <div className="min-h-screen py-8 px-4 md:px-8 pt-32">
       <div className="max-w-4xl mx-auto">
         <div className="flex items-center gap-3 mb-8">
           <Settings className="w-8 h-8 text-purple-400" />

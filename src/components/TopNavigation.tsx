@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import AuthModal from "@/components/AuthModal";
 import { useAppSelector } from "@/store/hooks";
+import ProfileDropdown from "@/components/ProfileDropdown";
 
 const TopNavigation = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -266,44 +267,7 @@ const TopNavigation = () => {
                 Sign In
               </Button>
             )}
-            {isAuthenticated && (
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger className="focus:outline-none">
-                  <Avatar className="w-8 h-8 cursor-pointer border-2 border-purple-500">
-                    <AvatarFallback className="bg-purple-500 text-white">
-                      {user?.name?.charAt(0).toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="w-72 bg-[#1a1a1a] border-[#333]"
-                >
-                  <DropdownMenuLabel className="text-white">
-                    <div className="flex space-x-4">
-                      <Avatar>
-                        <AvatarFallback className="bg-purple-500 text-white">
-                          {user?.name?.charAt(0).toUpperCase() || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-
-                      <div className="flex flex-col space-y-3 text-base">
-                        <span>
-                          <p className="text-white">{user?.name || "User"}</p>
-                          <p className="text-gray-400">{user?.email}</p>
-                        </span>
-                        <Link
-                          href={`/channels/${user?.id || ""}`}
-                          className="text-purple-400 hover:text-purple-300"
-                        >
-                          View your channel
-                        </Link>
-                      </div>
-                    </div>
-                  </DropdownMenuLabel>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+            {isAuthenticated && <ProfileDropdown />}
           </div>
 
           {/* Desktop: Notifications and Sign In */}
@@ -316,42 +280,7 @@ const TopNavigation = () => {
                 Sign In
               </Button>
             ) : (
-              <DropdownMenu modal={false}>
-                <DropdownMenuTrigger className="focus:outline-none">
-                  <Avatar className="w-8 h-8 cursor-pointer border-2 border-purple-500">
-                    <AvatarFallback className="bg-purple-500 text-white">
-                      {user?.name?.charAt(0).toUpperCase() || "U"}
-                    </AvatarFallback>
-                  </Avatar>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="w-72 bg-[#1a1a1a] border-[#333]"
-                >
-                  <DropdownMenuLabel className="text-white">
-                    <div className="flex space-x-4">
-                      <Avatar>
-                        <AvatarFallback className="bg-purple-500 text-white">
-                          {user?.name?.charAt(0).toUpperCase() || "U"}
-                        </AvatarFallback>
-                      </Avatar>
-
-                      <div className="flex flex-col space-y-3 text-base">
-                        <span>
-                          <p className="text-white">{user?.name || "User"}</p>
-                          <p className="text-gray-400">{user?.email}</p>
-                        </span>
-                        <Link
-                          href={`/channels/${user?.id || ""}`}
-                          className="text-purple-400 hover:text-purple-300"
-                        >
-                          View your channel
-                        </Link>
-                      </div>
-                    </div>
-                  </DropdownMenuLabel>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <ProfileDropdown />
             )}
           </div>
         </div>
