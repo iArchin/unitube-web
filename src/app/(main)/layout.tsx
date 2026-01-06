@@ -4,7 +4,7 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <main className="pt-36 md:pl-16 bg-[#111111]">
+    <main className="pt-8 md:pl-16 bg-[#111111]">
       <div>{children}</div>
     </main>
   );

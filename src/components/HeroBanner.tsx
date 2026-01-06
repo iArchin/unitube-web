@@ -19,7 +19,7 @@ const HeroBanner = () => {
   const videoId = "dQw4w9WgXcQ"; // Example video ID
 
   return (
-    <div className="w-full px-0 md:px-4 py-2 mb-2">
+    <div className="w-full px-0 md:px-4 py-2 mb-2 pt-32">
       <div className="flex flex-col md:flex-row items-center gap-8 max-w-7xl mx-auto">
         {/* Left side - Text */}
         <div className="flex-1 text-center md:text-left">

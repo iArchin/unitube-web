@@ -531,7 +531,11 @@ export async function fetchCategoriesWithVideos(
 export interface ShortVideoResponse {
   current_page: number;
   data: Array<{
-    user: any;
+    user: {
+      id: number;
+      name: string;
+      email: string;
+    };
     id: number;
     video_type: string;
     category_id: number;
@@ -541,6 +545,12 @@ export interface ShortVideoResponse {
     user_id: number;
     video_link: string;
     download_link: string | null;
+    status: string;
+    created_at: string;
+    likes_count: number;
+    dislikes_count: number;
+    comments_count: number;
+    views_count: number;
   }>;
   first_page_url: string;
   from: number;
@@ -585,24 +595,6 @@ export async function fetchShortVideos(
       );
     }
 
-    // Helper function to generate random view count
-    const getRandomViewCount = (): string => {
-      const views = Math.floor(Math.random() * 10000000) + 100; // Random between 100 and 10,000,100
-      return views.toString();
-    };
-
-    // Helper function to generate random date (within last 2 years)
-    const getRandomDate = (): string => {
-      const now = new Date();
-      const twoYearsAgo = new Date(
-        now.getTime() - 2 * 365 * 24 * 60 * 60 * 1000
-      );
-      const randomTime =
-        twoYearsAgo.getTime() +
-        Math.random() * (now.getTime() - twoYearsAgo.getTime());
-      return new Date(randomTime).toISOString();
-    };
-
     // Transform API response to Video format and filter out null videos and videos with missing critical data
     return data.data.map((video) => {
       // Use poster image for thumbnail, fallback to vertical placeholder for shorts (180x320 aspect ratio)
@@ -617,14 +609,17 @@ export async function fetchShortVideos(
         title: video.title || "Untitled Short",
         description: video.description || "",
         thumbnail,
-        viewCount: getRandomViewCount(),
+        viewCount: (video.views_count || 0).toString(),
         channel: {
           channelId: video.user_id.toString(),
-          channelTitle: video.user.name || "User Channel", // API doesn't provide channel name
-          channelImage: `https://via.placeholder.com/40x40/6366f1/ffffff?text=U${video.user_id}`, // Placeholder
+          channelTitle: video.user?.name || "User Channel",
+          channelImage: `https://via.placeholder.com/40x40/6366f1/ffffff?text=${encodeURIComponent(
+            (video.user?.name || "U").substring(0, 2).toUpperCase()
+          )}`,
         },
-        created_at: getRandomDate(),
+        created_at: video.created_at || new Date().toISOString(),
         download_link: video.download_link || null,
+        user: video.user,
       } as Video;
     });
   } catch (error) {

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSelector } from "react-redux";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   ChevronUp,
@@ -61,6 +61,7 @@ const defaultComments = [
 const ShortsPage = () => {
   const token = useSelector((state: RootState) => state.auth.token);
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [shorts, setShorts] = useState<Video[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -71,6 +72,12 @@ const ShortsPage = () => {
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const touchStartY = useRef<number>(0);
+  const touchEndY = useRef<number>(0);
+  const touchStartTime = useRef<number>(0);
+  const isNavigating = useRef<boolean>(false);
+  const minSwipeDistance = 50; // Minimum distance for a swipe
+  const maxSwipeTime = 300; // Maximum time for a swipe (ms)
 
   useEffect(() => {
     const loadShorts = async () => {
@@ -78,48 +85,52 @@ const ShortsPage = () => {
         setLoading(true);
         setError(null);
 
-        // If a video ID is provided in the URL, fetch that specific video
+        // Always fetch the list of shorts first
+        const shortsData = await fetchShortVideos(1, 50);
+
+        // Check if there's a specific video ID in the URL
         const videoIdFromUrl = searchParams.get("id");
+        let startIndex = 0;
+
         if (videoIdFromUrl) {
-          try {
-            const video = await fetchVideoById(
-              videoIdFromUrl,
-              token || undefined
-            );
-            // Verify it's a short type video and has download_link
-            if (video && video.download_link) {
-              setShorts([video]);
-              setCurrentIndex(0);
-              setPlayingVideos(new Set([0]));
-            } else {
-              setError("Video not found or unavailable");
+          // Try to find the video in the shorts data
+          const videoIndex = shortsData.findIndex(
+            (video) => video.id === videoIdFromUrl
+          );
+          if (videoIndex !== -1) {
+            // Video found in shorts data, set it as current index
+            startIndex = videoIndex;
+          } else {
+            // Video not found in shorts data, try to fetch it separately
+            try {
+              const specificVideo = await fetchVideoById(
+                videoIdFromUrl,
+                token || undefined
+              );
+              // Verify it's a short type video and has download_link
+              if (
+                specificVideo &&
+                specificVideo.download_link &&
+                specificVideo.video_type === "short"
+              ) {
+                // Add the specific video at the beginning and set as current
+                shortsData.unshift(specificVideo);
+                startIndex = 0;
+              } else {
+                // Video exists but is not a short, just start from beginning
+                startIndex = 0;
+              }
+            } catch (err) {
+              console.error("Failed to fetch specific video:", err);
+              // Continue with the shorts data, start from beginning
+              startIndex = 0;
             }
-          } catch (err) {
-            console.error("Failed to fetch video:", err);
-            setError(
-              err instanceof Error ? err.message : "Failed to load video"
-            );
-          } finally {
-            setLoading(false);
           }
-          return;
         }
 
-        // Otherwise, fetch the list of shorts
-        const shortsData = await fetchShortVideos(1, 50);
-        const filteredShorts = shortsData.filter(
-          (video) =>
-            video !== null &&
-            video !== undefined &&
-            video.id &&
-            video.title &&
-            video.thumbnail &&
-            video.download_link !== null &&
-            video.download_link !== undefined
-        );
-        setShorts(filteredShorts);
-        setCurrentIndex(0);
-        setPlayingVideos(new Set([0]));
+        setShorts(shortsData);
+        setCurrentIndex(startIndex);
+        setPlayingVideos(new Set([startIndex]));
       } catch (err) {
         console.error("Failed to fetch shorts:", err);
         setError(err instanceof Error ? err.message : "Failed to load shorts");
@@ -131,13 +142,52 @@ const ShortsPage = () => {
     loadShorts();
   }, [token, searchParams]);
 
+  // Navigation functions - must be defined before any useEffect that uses them
+  const navigateUp = useCallback(() => {
+    setCurrentIndex((prevIndex) => {
+      if (prevIndex > 0) {
+        const newIndex = prevIndex - 1;
+        isNavigating.current = true;
+        setPlayingVideos(new Set([newIndex]));
+        // Reset flag after navigation completes
+        setTimeout(() => {
+          isNavigating.current = false;
+        }, 500);
+        return newIndex;
+      }
+      return prevIndex;
+    });
+  }, []);
+
+  const navigateDown = useCallback(() => {
+    setCurrentIndex((prevIndex) => {
+      if (prevIndex < shorts.length - 1) {
+        const newIndex = prevIndex + 1;
+        isNavigating.current = true;
+        setPlayingVideos(new Set([newIndex]));
+        // Reset flag after navigation completes
+        setTimeout(() => {
+          isNavigating.current = false;
+        }, 500);
+        return newIndex;
+      }
+      return prevIndex;
+    });
+  }, [shorts.length]);
+
   // Handle keyboard navigation
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === "ArrowUp" || e.key === "w") {
+      if (e.key === "ArrowUp" || e.key === "w" || e.key === "W") {
         e.preventDefault();
         navigateUp();
-      } else if (e.key === "ArrowDown" || e.key === "s") {
+      } else if (e.key === "ArrowDown" || e.key === "s" || e.key === "S") {
+        e.preventDefault();
+        navigateDown();
+      } else if (e.key === "ArrowLeft" || e.key === "a" || e.key === "A") {
+        e.preventDefault();
+        navigateUp();
+      } else if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
         e.preventDefault();
         navigateDown();
       }
@@ -145,66 +195,129 @@ const ShortsPage = () => {
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [currentIndex, shorts.length]);
+  }, [navigateUp, navigateDown]);
 
-  // Handle scroll navigation
+  // Update URL params when current video changes
+  useEffect(() => {
+    if (!loading && shorts.length > 0 && currentIndex < shorts.length) {
+      const currentVideo = shorts[currentIndex];
+      if (currentVideo && currentVideo.id) {
+        // Update URL with current video ID
+        const newUrl = `/shorts?id=${currentVideo.id}`;
+        router.replace(newUrl, { scroll: false });
+      }
+    }
+  }, [currentIndex, shorts, loading, router]);
+
+  // Handle scroll navigation and auto-play
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     let isScrolling = false;
+    let scrollTimeout: NodeJS.Timeout;
+
     const handleScroll = () => {
       if (isScrolling) return;
       isScrolling = true;
 
-      const scrollPosition = container.scrollTop;
-      const itemHeight = window.innerHeight;
-      const newIndex = Math.round(scrollPosition / itemHeight);
-
-      if (
-        newIndex !== currentIndex &&
-        newIndex >= 0 &&
-        newIndex < shorts.length
-      ) {
-        setCurrentIndex(newIndex);
-        // Pause previous video and play current
-        setPlayingVideos(new Set([newIndex]));
+      // Clear any existing timeout
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
       }
 
-      setTimeout(() => {
+      // Debounce scroll handling
+      scrollTimeout = setTimeout(() => {
+        // Don't update index if we're programmatically navigating
+        if (isNavigating.current) {
+          isScrolling = false;
+          return;
+        }
+
+        const scrollPosition = container.scrollTop;
+        const itemHeight = window.innerHeight;
+        const newIndex = Math.round(scrollPosition / itemHeight);
+
+        if (
+          newIndex !== currentIndex &&
+          newIndex >= 0 &&
+          newIndex < shorts.length
+        ) {
+          setCurrentIndex(newIndex);
+          // Pause previous video and play current
+          setPlayingVideos(new Set([newIndex]));
+        }
+
         isScrolling = false;
-      }, 100);
+      }, 150);
     };
 
-    container.addEventListener("scroll", handleScroll);
-    return () => container.removeEventListener("scroll", handleScroll);
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener("scroll", handleScroll);
+      if (scrollTimeout) {
+        clearTimeout(scrollTimeout);
+      }
+    };
   }, [currentIndex, shorts.length]);
 
-  // Scroll to current video when index changes
+  // Scroll to current video when index changes (but not from user scroll)
   useEffect(() => {
     if (videoRefs.current[currentIndex] && shorts.length > 0) {
-      // Use setTimeout to ensure the DOM is ready
-      setTimeout(() => {
-        videoRefs.current[currentIndex]?.scrollIntoView({
-          behavior: "smooth",
-          block: "nearest",
-        });
-      }, 100);
+      const container = containerRef.current;
+      if (!container) return;
+
+      // Use requestAnimationFrame for smoother scrolling
+      requestAnimationFrame(() => {
+        const targetElement = videoRefs.current[currentIndex];
+        if (targetElement) {
+          const containerRect = container.getBoundingClientRect();
+          const targetRect = targetElement.getBoundingClientRect();
+          const scrollTop =
+            container.scrollTop + (targetRect.top - containerRect.top);
+
+          container.scrollTo({
+            top: scrollTop,
+            behavior: "smooth",
+          });
+        }
+      });
     }
   }, [currentIndex, shorts.length]);
 
-  const navigateUp = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-      setPlayingVideos(new Set([currentIndex - 1]));
-    }
+  // Handle touch/swipe gestures for mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+    touchStartTime.current = Date.now();
   };
 
-  const navigateDown = () => {
-    if (currentIndex < shorts.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-      setPlayingVideos(new Set([currentIndex + 1]));
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartY.current || !touchEndY.current) {
+      touchStartY.current = 0;
+      touchEndY.current = 0;
+      return;
     }
+
+    const distance = touchStartY.current - touchEndY.current;
+    const swipeTime = Date.now() - touchStartTime.current;
+    const isUpSwipe = distance > minSwipeDistance && swipeTime < maxSwipeTime;
+    const isDownSwipe =
+      distance < -minSwipeDistance && swipeTime < maxSwipeTime;
+
+    if (isUpSwipe) {
+      navigateDown();
+    } else if (isDownSwipe) {
+      navigateUp();
+    }
+
+    // Reset touch positions
+    touchStartY.current = 0;
+    touchEndY.current = 0;
+    touchStartTime.current = 0;
   };
 
   const toggleLike = (videoId: string) => {
@@ -252,20 +365,26 @@ const ShortsPage = () => {
 
   return (
     <div className="relative min-h-screen bg-background text-white">
-      {/* Navigation Arrows */}
-      <div className="fixed right-4 top-1/2 -translate-y-1/2 z-30 flex flex-col gap-3">
+      {/* Navigation Arrows - Always visible */}
+      <div className="fixed right-4 top-1/2 -translate-y-1/2 z-30 flex-col gap-3 hidden sm:flex items-center">
         <button
           onClick={navigateUp}
           disabled={currentIndex === 0}
-          className="p-2 rounded-full bg-black/40 backdrop-blur hover:bg-black/60 disabled:opacity-40 transition-colors"
+          className="p-3 rounded-full bg-black/60 backdrop-blur-md hover:bg-black/80 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg border border-white/10"
           aria-label="Previous short"
         >
           <ChevronUp className="w-6 h-6 text-white" />
         </button>
+
+        {/* Video counter */}
+        <div className="px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md text-white text-xs font-medium border border-white/10">
+          {currentIndex + 1} / {shorts.length}
+        </div>
+
         <button
           onClick={navigateDown}
           disabled={currentIndex >= shorts.length - 1}
-          className="p-2 rounded-full bg-black/40 backdrop-blur hover:bg-black/60 disabled:opacity-40 transition-colors"
+          className="p-3 rounded-full bg-black/60 backdrop-blur-md hover:bg-black/80 disabled:opacity-30 disabled:cursor-not-allowed transition-all shadow-lg border border-white/10"
           aria-label="Next short"
         >
           <ChevronDown className="w-6 h-6 text-white" />
@@ -277,15 +396,18 @@ const ShortsPage = () => {
         ref={containerRef}
         className="h-screen overflow-y-auto snap-y snap-mandatory scrollbar-hide"
         style={{ scrollBehavior: "smooth" }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {shorts.map((short, index) => (
           <div
             key={short.id}
             ref={(el) => (videoRefs.current[index] = el)}
-            className="h-screen snap-start flex flex-col items-center justify-center gap-5 px-4 md:px-6"
+            className="h-screen snap-start flex flex-col items-center justify-center gap-5 px-4 md:px-6 pb-20 md:pb-0"
           >
             {/* Video Player */}
-            <div className="w-full max-w-[480px] h-[80vh] max-h-[85vh]">
+            <div className="w-full max-w-[480px] h-[70vh] max-h-[75vh] md:h-[75vh]">
               <div className="relative w-full h-full rounded-2xl overflow-hidden bg-black/80">
                 {short.download_link ? (
                   <ReactPlayer
@@ -296,11 +418,13 @@ const ShortsPage = () => {
                     controls={false}
                     loop={true}
                     muted={false}
+                    playsinline={true}
                     style={{ position: "absolute", top: 0, left: 0 }}
                     config={{
                       file: {
                         attributes: {
                           controlsList: "nodownload",
+                          playsInline: true,
                         },
                       },
                     }}
