@@ -2,19 +2,19 @@
 
 import React from "react";
 import Link from "next/link";
-import { 
-  UserRound, 
-  SquarePlay, 
-  Users, 
-  LogOut, 
-  Settings, 
-  Moon, 
-  Globe, 
-  MapPin, 
-  Keyboard, 
-  HelpCircle, 
+import {
+  UserRound,
+  SquarePlay,
+  Users,
+  LogOut,
+  Settings,
+  Moon,
+  Globe,
+  MapPin,
+  Keyboard,
+  HelpCircle,
   MessageSquare,
-  ChevronRight
+  ChevronRight,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -36,14 +36,18 @@ const ProfileDropdown = () => {
     dispatch(logout());
   };
 
-  const menuItemClass = "flex items-center gap-3 px-4 py-2.5 focus:bg-[#2a2a2a] focus:text-white cursor-pointer transition-colors";
+  const menuItemClass =
+    "flex items-center gap-3 px-4 py-2.5 focus:bg-[#2a2a2a] focus:text-white cursor-pointer transition-colors";
   const iconClass = "w-5 h-5 text-white";
 
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger className="focus:outline-none">
         <Avatar className="w-8 h-8 cursor-pointer border-2 border-purple-500 hover:opacity-80 transition-opacity">
-          <AvatarImage src={user?.profile_image || undefined} className="object-cover" />
+          <AvatarImage
+            src={user?.profile_image || undefined}
+            className="object-cover"
+          />
           <AvatarFallback className="bg-purple-500 text-white">
             {user?.name?.charAt(0).toUpperCase() || "U"}
           </AvatarFallback>
@@ -55,7 +59,10 @@ const ProfileDropdown = () => {
       >
         <div className="p-4 flex gap-4 border-b border-[#333]">
           <Avatar className="w-10 h-10 border border-purple-500">
-            <AvatarImage src={user?.profile_image || undefined} className="object-cover" />
+            <AvatarImage
+              src={user?.profile_image || undefined}
+              className="object-cover"
+            />
             <AvatarFallback className="bg-purple-500 text-white">
               {user?.name?.charAt(0).toUpperCase() || "U"}
             </AvatarFallback>
@@ -79,15 +86,15 @@ const ProfileDropdown = () => {
               <span className="flex-1">Your channel</span>
             </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem className={menuItemClass}>
+          {/* <DropdownMenuItem className={menuItemClass}>
             <SquarePlay className={iconClass} />
             <span className="flex-1">UniTube Studio</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem className={menuItemClass}>
+          </DropdownMenuItem> */}
+          {/* <DropdownMenuItem className={menuItemClass}>
             <Users className={iconClass} />
             <span className="flex-1 text-left">Switch account</span>
             <ChevronRight className="w-4 h-4 text-gray-500" />
-          </DropdownMenuItem>
+          </DropdownMenuItem> */}
           <DropdownMenuItem className={menuItemClass} onClick={handleLogout}>
             <LogOut className={iconClass} />
             <span className="flex-1">Sign out</span>
@@ -147,4 +154,3 @@ const ProfileDropdown = () => {
 };
 
 export default ProfileDropdown;
-
