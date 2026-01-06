@@ -52,7 +52,9 @@ const convertCommentToUI = (comment: APIComment): Comment => {
   // Calculate time ago
   const commentDate = new Date(comment.created_at);
   const now = new Date();
-  const diffInSeconds = Math.floor((now.getTime() - commentDate.getTime()) / 1000);
+  const diffInSeconds = Math.floor(
+    (now.getTime() - commentDate.getTime()) / 1000
+  );
   let timeAgo = "";
   if (diffInSeconds < 60) {
     timeAgo = "just now";
@@ -72,8 +74,8 @@ const convertCommentToUI = (comment: APIComment): Comment => {
     author: authorName,
     avatar: authorInitials,
     text: comment.body,
-    likes: comment.likes_count || 0,
-    dislikes: comment.dislikes_count || 0,
+    likes: 0,
+    dislikes: 0,
     timeAgo,
     userLiked: false,
     userDisliked: false,
@@ -131,7 +133,12 @@ const VideoDetails = () => {
 
   // Handle video progress for view tracking
   const handleProgress = useCallback(
-    async (state: { played: number; playedSeconds: number; loaded: number; loadedSeconds: number }) => {
+    async (state: {
+      played: number;
+      playedSeconds: number;
+      loaded: number;
+      loadedSeconds: number;
+    }) => {
       // Skip if view already registered or registration in progress
       if (viewRegistered || viewRegistrationInProgressRef.current || !id) {
         return;
@@ -241,9 +248,8 @@ const VideoDetails = () => {
               1,
               50
             );
-            const uiComments = commentsResponse.comments.data.map(
-              convertCommentToUI
-            );
+            const uiComments =
+              commentsResponse.comments.data.map(convertCommentToUI);
             setComments(uiComments);
             setHasMoreComments(
               commentsResponse.comments.current_page <
