@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatCount, formatPublishedDate } from "@/lib/utils";
 
 const HorizontalThumbnail = ({ video }: { video: Video }) => {
-  console.log(video.created_at);
+  console.log(video);
   // Build URL with download_link, title, and description as query parameters
   const params = new URLSearchParams();
   if (video.download_link) {

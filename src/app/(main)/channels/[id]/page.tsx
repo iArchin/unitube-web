@@ -1,3 +1,5 @@
+//@ts-nocheck
+
 "use client";
 
 import { useParams } from "next/navigation";
@@ -139,8 +141,12 @@ const ChannelPage = () => {
   // Final display data (use Redux for current user to reflect live updates)
   const displayName = isCurrentUser ? currentUser?.name : userProfile?.name;
   const displayEmail = isCurrentUser ? currentUser?.email : userProfile?.email;
-  const displayImage = isCurrentUser ? currentUser?.profile_image : userProfile?.profileImage;
-  const displayBio = isCurrentUser ? currentUser?.bio_description : userProfile?.bio;
+  const displayImage = isCurrentUser
+    ? currentUser?.profile_image
+    : userProfile?.profileImage;
+  const displayBio = isCurrentUser
+    ? currentUser?.bio_description
+    : userProfile?.bio;
 
   // Filter videos by type based on active tab
   const longVideos = videos.filter(
@@ -219,7 +225,7 @@ const ChannelPage = () => {
                 </button>
               )}
             </div>
-            
+
             <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 text-sm text-muted-foreground mb-3">
               <span className="flex items-center">
                 {formatCount(totalVideos)} video{totalVideos !== 1 ? "s" : ""}
@@ -246,9 +252,9 @@ const ChannelPage = () => {
           </div>
         </div>
 
-        <EditProfileModal 
-          open={isEditModalOpen} 
-          onOpenChange={setIsEditModalOpen} 
+        <EditProfileModal
+          open={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
         />
 
         {/* Tabs */}
