@@ -3,7 +3,6 @@
 import { Bell, Menu, Search, X } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useContext, useRef, useState } from "react";
-import { DialogTrigger } from "@radix-ui/react-dialog";
 import { useRouter } from "next/navigation";
 
 import {
@@ -14,11 +13,9 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import AuthModal from "@/components/AuthModal";
-import AppContext from "@/context/appContext";
 import { useAppSelector } from "@/store/hooks";
 
 const TopNavigation = () => {
@@ -28,8 +25,6 @@ const TopNavigation = () => {
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
 
   const router = useRouter();
-
-  const { setShowNav } = useContext(AppContext);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
@@ -135,7 +130,7 @@ const TopNavigation = () => {
 
         <div className="flex items-center space-x-4">
           {/* Desktop Notifications */}
-          <div className="hidden md:block">
+          <div className="hidden md:block pt-2">
             <DropdownMenu modal={false}>
               <DropdownMenuTrigger className="focus:outline-none">
                 <Bell

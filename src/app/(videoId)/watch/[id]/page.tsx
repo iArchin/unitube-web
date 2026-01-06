@@ -9,10 +9,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatCount, formatPublishedDate } from "@/lib/utils";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import RelatedVideos from "@/components/RelatedVideos";
-import { generateMockVideos } from "@/lib/mockData";
 import { Video } from "../../../../../types/custom_types";
 import { Button } from "@/components/ui/button";
-import { fetchVideoById, fetchVideosByCategoryId } from "@/lib/api";
+import {
+  fetchVideoById,
+  fetchVideosByCategoryId,
+  GetVideoResponse,
+} from "@/lib/api";
 import { RootState } from "@/store/store";
 import axios from "axios";
 
@@ -35,80 +38,6 @@ const ReactPlayer = dynamic(() => import("react-player"), {
   ssr: false,
 });
 
-// Default video data - you can customize this
-const getDefaultVideo = (id: string | string[] | undefined): Video => {
-  const defaultVideos = generateMockVideos(1, "trending");
-  const video = defaultVideos[0];
-
-  return {
-    ...video,
-    id: (id as string) || video.id,
-    title: "Amazing Tech Review 2024 - Latest Features & Updates",
-    description: `This is a comprehensive review of the latest technology trends in 2024. 
-    We cover everything from new smartphone releases to cutting-edge AI developments. 
-    Join us as we explore the future of technology and how it's shaping our world. 
-    Don't forget to like and subscribe for more tech content!`,
-  };
-};
-
-// Default comments data
-const defaultComments = [
-  {
-    id: 1,
-    author: "John Doe",
-    avatar: "JD",
-    text: "Great video! Really helpful content. The explanations were clear and easy to follow. Keep up the great work!",
-    likes: 124,
-    dislikes: 2,
-    timeAgo: "2 hours ago",
-  },
-  {
-    id: 2,
-    author: "Sarah Miller",
-    avatar: "SM",
-    text: "Thanks for the detailed explanation! This really cleared things up for me. Can't wait for the next video.",
-    likes: 89,
-    dislikes: 0,
-    timeAgo: "5 hours ago",
-  },
-  {
-    id: 3,
-    author: "Mike Wilson",
-    avatar: "MW",
-    text: "Awesome tutorial! Can you make more videos on this topic? I'd love to see a deep dive into the advanced features.",
-    likes: 156,
-    dislikes: 1,
-    timeAgo: "1 day ago",
-  },
-  {
-    id: 4,
-    author: "Anna Lee",
-    avatar: "AL",
-    text: "This is exactly what I was looking for. Bookmarked for future reference! The examples were spot on.",
-    likes: 67,
-    dislikes: 0,
-    timeAgo: "2 days ago",
-  },
-  {
-    id: 5,
-    author: "Robert Brown",
-    avatar: "RB",
-    text: "Clear and concise. The examples really helped me understand the concepts better. Subscribed!",
-    likes: 98,
-    dislikes: 0,
-    timeAgo: "3 days ago",
-  },
-  {
-    id: 6,
-    author: "Emily Chen",
-    avatar: "EC",
-    text: "Love the production quality! The visuals and editing are top-notch. Looking forward to more content like this.",
-    likes: 203,
-    dislikes: 3,
-    timeAgo: "4 days ago",
-  },
-];
-
 const VideoDetails = () => {
   const { id } = useParams();
   const token = useSelector((state: RootState) => state.auth.token);
@@ -117,14 +46,14 @@ const VideoDetails = () => {
   const [substringCount, setSubstringCount] = useState<undefined | number>(200);
   const [newComment, setNewComment] = useState("");
   const [videoDetails, setVideoDetails] = useState<Video | null>(null);
+  const [apiResponse, setApiResponse] = useState<GetVideoResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [likes, setLikes] = useState(0);
   const [dislikes, setDislikes] = useState(0);
   const [userLiked, setUserLiked] = useState(false);
   const [userDisliked, setUserDisliked] = useState(false);
-  const [comments, setComments] = useState<Comment[]>(defaultComments);
-  const [subscriberCount] = useState(() => Math.floor(Math.random() * 1000000));
+  const [comments, setComments] = useState<Comment[]>([]);
   const [relatedVideos, setRelatedVideos] = useState<Video[]>([]);
   const [relatedVideosLoading, setRelatedVideosLoading] = useState(false);
 
@@ -143,30 +72,36 @@ const VideoDetails = () => {
       try {
         setLoading(true);
         setError(null);
-        // Token is optional for this endpoint
+
+        // Fetch raw API response to get all fields including counts
+        const headers: Record<string, string> = {};
+        if (token?.trim()) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+
+        const { data } = await axios.get<GetVideoResponse>(
+          `https://api.unitribe.app/ut/api/videos/get-video`,
+          {
+            params: { id },
+            headers,
+            timeout: 10000,
+          }
+        );
+
+        // Store raw API response
+        setApiResponse(data);
+
+        // Transform and set video details
         const video = await fetchVideoById(id as string, token || undefined);
         setVideoDetails(video);
-        // Initialize likes/dislikes
-        setLikes(Math.floor(Math.random() * 50000));
 
-        // Fetch category ID from the API to get related videos
-        try {
-          const headers: Record<string, string> = {};
-          if (token?.trim()) {
-            headers.Authorization = `Bearer ${token}`;
-          }
+        // Initialize likes/dislikes from API response
+        setLikes(data.likes_count || 0);
+        setDislikes(data.dislikes_count || 0);
 
-          const { data } = await axios.get(
-            `https://api.unitribe.app/ut/api/videos/get-video`,
-            {
-              params: { id },
-              headers,
-              timeout: 10000,
-            }
-          );
-
-          if (data?.category?.id && token) {
-            // Fetch related videos from the same category
+        // Fetch related videos if category and token are available
+        if (data?.category?.id && token) {
+          try {
             setRelatedVideosLoading(true);
             const categoryVideos = await fetchVideosByCategoryId(
               data.category.id,
@@ -181,25 +116,17 @@ const VideoDetails = () => {
               .slice(0, 8);
 
             setRelatedVideos(filteredVideos);
-          } else {
-            // Fallback to mock videos if no category or token
-            setRelatedVideos(generateMockVideos(8, "trending"));
+          } catch (relatedErr) {
+            console.error("Failed to fetch related videos:", relatedErr);
+            // Don't set fallback - leave related videos empty
+          } finally {
+            setRelatedVideosLoading(false);
           }
-        } catch (relatedErr) {
-          console.error("Failed to fetch related videos:", relatedErr);
-          // Fallback to mock videos on error
-          setRelatedVideos(generateMockVideos(8, "trending"));
-        } finally {
-          setRelatedVideosLoading(false);
         }
       } catch (err) {
         console.error("Failed to fetch video:", err);
         setError(err instanceof Error ? err.message : "Failed to load video");
-        // Fallback to default video on error
-        setVideoDetails(getDefaultVideo(id));
-        setLikes(Math.floor(Math.random() * 50000));
-        // Use mock videos as fallback
-        setRelatedVideos(generateMockVideos(8, "trending"));
+        // Don't set fallback - videoDetails remains null
       } finally {
         setLoading(false);
       }
@@ -320,24 +247,18 @@ const VideoDetails = () => {
     );
   };
 
-  // Use default video data if not loaded yet
-  const currentVideo = videoDetails || getDefaultVideo(id);
-
   // Memoize formatted published date to prevent recalculation on re-renders
   const formattedPublishedDate = useMemo(() => {
-    return formatPublishedDate(
-      videoDetails?.created_at || currentVideo.created_at
-    );
-  }, [videoDetails?.created_at, currentVideo.created_at]);
+    const createdAt = apiResponse?.created_at || videoDetails?.created_at;
+    if (!createdAt) return "";
+    return formatPublishedDate(createdAt);
+  }, [apiResponse?.created_at, videoDetails?.created_at]);
 
-  // Determine video URL - prioritize download_link from:
-  // 1. videoDetails (from API fetch)
-  // 2. currentVideo (fallback/default)
-  const videoUrl =
-    videoDetails?.download_link || currentVideo.download_link || undefined;
+  // Determine video URL from API data
+  const videoUrl = videoDetails?.download_link || undefined;
 
   // Check if we have a valid video URL to play
-  const hasVideoUrl = !!videoUrl;
+  const hasVideoUrl = !!videoUrl && !!videoDetails;
 
   return (
     <div className="min-h-screen bg-[#111111] pt-16 md:pt-20">
@@ -352,11 +273,11 @@ const VideoDetails = () => {
                   <div className="w-full h-full flex items-center justify-center">
                     <p className="text-white">Loading video...</p>
                   </div>
-                ) : error && !hasVideoUrl ? (
+                ) : error ? (
                   <div className="w-full h-full flex items-center justify-center">
                     <p className="text-red-500">Error: {error}</p>
                   </div>
-                ) : isMounted && hasVideoUrl ? (
+                ) : isMounted && hasVideoUrl && videoDetails ? (
                   <ReactPlayer
                     url={videoUrl}
                     width="100%"
@@ -386,125 +307,129 @@ const VideoDetails = () => {
             </div>
 
             {/* Video Info */}
-            <div className="mb-4">
-              <h3 className="text-xl md:text-2xl font-semibold text-white mb-3">
-                {videoDetails?.title || currentVideo.title}
-              </h3>
+            {videoDetails && apiResponse && (
+              <div className="mb-4">
+                <h3 className="text-xl md:text-2xl font-semibold text-white mb-3">
+                  {apiResponse.title || videoDetails.title}
+                </h3>
 
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-                <Link
-                  href={`/channels/${
-                    videoDetails?.channel.channelId ||
-                    currentVideo.channel.channelId
-                  }`}
-                  className="flex items-center space-x-3 hover:opacity-80 transition-opacity group"
-                >
-                  <Avatar className="group-hover:ring-2 ring-purple-500 transition-all">
-                    <AvatarImage
-                      src={
-                        videoDetails?.channel.channelImage ||
-                        currentVideo.channel.channelImage
-                      }
-                      alt={
-                        videoDetails?.channel.channelTitle ||
-                        currentVideo.channel.channelTitle
-                      }
-                    />
-                    <AvatarFallback>
-                      {(
-                        videoDetails?.channel.channelTitle ||
-                        currentVideo.channel.channelTitle
-                      )
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .toUpperCase()
-                        .slice(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h4 className="text-white text-sm font-medium group-hover:text-purple-400 transition-colors">
-                      {videoDetails?.channel.channelTitle ||
-                        currentVideo.channel.channelTitle}
-                    </h4>
-                    <p className="text-gray-400 text-xs">
-                      {formatCount(subscriberCount)} subscribers
-                    </p>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                  {apiResponse && (
+                    <Link
+                      href={`/channels/${apiResponse.uploader.id}`}
+                      className="flex items-center space-x-3 hover:opacity-80 transition-opacity group"
+                    >
+                      <Avatar className="group-hover:ring-2 ring-purple-500 transition-all">
+                        <AvatarImage
+                          src={`https://via.placeholder.com/40x40/6366f1/ffffff?text=${apiResponse.uploader.name
+                            .substring(0, 2)
+                            .toUpperCase()}`}
+                          alt={apiResponse.uploader.name}
+                        />
+                        <AvatarFallback>
+                          {apiResponse.uploader.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()
+                            .slice(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h4 className="text-white text-sm font-medium group-hover:text-purple-400 transition-colors">
+                          {apiResponse.uploader.name}
+                        </h4>
+                      </div>
+                    </Link>
+                  )}
+
+                  <div className="flex space-x-4 text-sm items-center bg-[#1a1a1a] text-white px-3 md:px-5 py-2 rounded-3xl">
+                    <button
+                      onClick={handleLike}
+                      className={`flex items-center space-x-2 transition-colors ${
+                        userLiked ? "text-blue-500" : "hover:text-blue-500"
+                      }`}
+                    >
+                      <ThumbsUp className="w-5 h-5" />
+                      <span className="text-sm">{formatCount(likes)}</span>
+                    </button>
+                    <span className="text-gray-600">|</span>
+                    <button
+                      onClick={handleDislike}
+                      className={`flex items-center transition-colors ${
+                        userDisliked ? "text-red-500" : "hover:text-red-500"
+                      }`}
+                    >
+                      <ThumbsDown className="w-5 h-5" />
+                      {dislikes > 0 && (
+                        <span className="text-sm ml-1">
+                          {formatCount(dislikes)}
+                        </span>
+                      )}
+                    </button>
                   </div>
-                </Link>
-
-                <div className="flex space-x-4 text-sm items-center bg-[#1a1a1a] text-white px-3 md:px-5 py-2 rounded-3xl">
-                  <button
-                    onClick={handleLike}
-                    className={`flex items-center space-x-2 transition-colors ${
-                      userLiked ? "text-blue-500" : "hover:text-blue-500"
-                    }`}
-                  >
-                    <ThumbsUp className="w-5 h-5" />
-                    <span className="text-sm">{formatCount(likes)}</span>
-                  </button>
-                  <span className="text-gray-600">|</span>
-                  <button
-                    onClick={handleDislike}
-                    className={`flex items-center transition-colors ${
-                      userDisliked ? "text-red-500" : "hover:text-red-500"
-                    }`}
-                  >
-                    <ThumbsDown className="w-5 h-5" />
-                    {dislikes > 0 && (
-                      <span className="text-sm ml-1">
-                        {formatCount(dislikes)}
-                      </span>
-                    )}
-                  </button>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Description */}
-            <div className="p-4 bg-[#1a1a1a] text-white rounded-lg mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-gray-300">
-                  {formatCount(
-                    +(videoDetails?.viewCount || currentVideo.viewCount)
-                  )}{" "}
-                  views • {formattedPublishedDate}
-                </span>
+            {videoDetails && apiResponse && (
+              <div className="p-4 bg-[#1a1a1a] text-white rounded-lg mb-6">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-300">
+                    {formatCount(apiResponse.views_count || 0)} views •{" "}
+                    {formattedPublishedDate}
+                  </span>
+                </div>
+                <p className="leading-6 text-sm text-gray-300">
+                  {(
+                    apiResponse?.description ||
+                    videoDetails.description ||
+                    ""
+                  ).substring(
+                    0,
+                    substringCount ||
+                      (
+                        apiResponse?.description ||
+                        videoDetails.description ||
+                        ""
+                      ).length
+                  )}
+                  {substringCount &&
+                    substringCount <
+                      (
+                        apiResponse?.description ||
+                        videoDetails.description ||
+                        ""
+                      ).length &&
+                    "..."}
+                  {(apiResponse?.description || videoDetails.description || "")
+                    .length > 200 && (
+                    <button
+                      onClick={() =>
+                        substringCount === 200
+                          ? setSubstringCount(undefined)
+                          : setSubstringCount(200)
+                      }
+                      className="font-medium cursor-pointer text-sm underline text-blue-400 ml-1 hover:text-blue-500"
+                    >
+                      {substringCount === 200 ? "Show more" : "Show less"}
+                    </button>
+                  )}
+                </p>
               </div>
-              <p className="leading-6 text-sm text-gray-300">
-                {(
-                  videoDetails?.description || currentVideo.description
-                ).substring(
-                  0,
-                  substringCount ||
-                    (videoDetails?.description || currentVideo.description)
-                      .length
-                )}
-                {substringCount &&
-                  substringCount <
-                    (videoDetails?.description || currentVideo.description)
-                      .length &&
-                  "..."}
-                {(videoDetails?.description || currentVideo.description)
-                  .length > 200 && (
-                  <button
-                    onClick={() =>
-                      substringCount === 200
-                        ? setSubstringCount(undefined)
-                        : setSubstringCount(200)
-                    }
-                    className="font-medium cursor-pointer text-sm underline text-blue-400 ml-1 hover:text-blue-500"
-                  >
-                    {substringCount === 200 ? "Show more" : "Show less"}
-                  </button>
-                )}
-              </p>
-            </div>
+            )}
 
             {/* Comments Section */}
             <div className="mt-6">
               <h4 className="text-lg font-semibold mb-6 text-white">
-                {comments.length} Comment{comments.length !== 1 ? "s" : ""}
+                {apiResponse
+                  ? `${apiResponse.comments_count || 0} Comment${
+                      (apiResponse.comments_count || 0) !== 1 ? "s" : ""
+                    }`
+                  : `${comments.length} Comment${
+                      comments.length !== 1 ? "s" : ""
+                    }`}
               </h4>
 
               {/* Add Comment Input */}
