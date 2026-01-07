@@ -11,6 +11,7 @@ import {
   Crown,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
@@ -52,15 +53,13 @@ const Sidebar = ({ className }: Props) => {
       <div className="flex flex-col items-center space-y-6">
         <Link href="/" className="mb-4">
           <div className="flex flex-col items-center space-y-1">
-            <div className="relative w-8 h-8">
-              <div className="absolute inset-0 grid grid-cols-2 gap-0.5">
-                <div className="w-full h-full bg-purple-500"></div>
-                <div className="w-full h-full bg-purple-600"></div>
-                <div className="w-full h-full bg-purple-600"></div>
-                <div className="w-full h-full bg-purple-500"></div>
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center"></div>
-            </div>
+            <Image
+              src="/img/logo.png"
+              alt="Unitube Logo"
+              width={32}
+              height={32}
+              className="object-contain"
+            />
           </div>
         </Link>
         <Link href="/">

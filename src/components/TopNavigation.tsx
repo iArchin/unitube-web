@@ -4,6 +4,7 @@ import { Bell, Menu, Search, X } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useContext, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import localFont from "next/font/local";
 
 import {
   DropdownMenu,
@@ -18,6 +19,11 @@ import { Button } from "@/components/ui/button";
 import AuthModal from "@/components/AuthModal";
 import { useAppSelector } from "@/store/hooks";
 import ProfileDropdown from "@/components/ProfileDropdown";
+import { cn } from "@/lib/utils";
+
+const monumentFont = localFont({
+  src: "../../public/img/MonumentExtended-Regular.otf",
+});
 
 const TopNavigation = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -88,7 +94,14 @@ const TopNavigation = () => {
       <div className="flex justify-between items-center px-4 md:px-8 h-16">
         <div className="flex items-center space-x-8">
           <Link href="/" className="flex items-center space-x-2">
-            <span className="text-xl font-bold text-white">UniTube</span>
+            <span
+              className={cn(
+                "text-xl tracking-[.2em] text-purple-300",
+                monumentFont.className
+              )}
+            >
+              UNITUBE
+            </span>
           </Link>
           <div className="hidden md:flex items-center space-x-8">
             <Link
