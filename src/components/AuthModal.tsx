@@ -277,7 +277,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
               </Button>
             </form>
 
-            <div className="relative">
+            {/* <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-[#333]"></div>
               </div>
@@ -313,7 +313,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
                 />
               </svg>
               Sign in with Google
-            </Button>
+            </Button> */}
 
             <div className="text-center text-sm text-gray-400">
               Don&apos;t have an account?{" "}
@@ -428,7 +428,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
               </Button>
             </form>
 
-            <div className="relative">
+            {/* <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-[#333]"></div>
               </div>
@@ -464,7 +464,7 @@ export default function AuthModal({ open, onOpenChange }: AuthModalProps) {
                 />
               </svg>
               Sign up with Google
-            </Button>
+            </Button> */}
 
             <div className="text-center text-sm text-gray-400">
               Already have an account?{" "}
