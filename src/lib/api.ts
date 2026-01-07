@@ -381,6 +381,8 @@ export interface GetVideoResponse {
   dislikes_count: number;
   comments_count: number;
   views_count: number;
+  liked_by_user?: boolean;
+  disliked_by_user?: boolean;
 }
 
 /**
@@ -975,9 +977,12 @@ export async function likeVideo(
 
   try {
     const { data } = await axios.post(
-      `https://api.unitribe.app/ut/api/videos/${videoId}/like`,
+      `https://api.unitribe.app/ut/api/videos/${videoId}/react`,
       {},
       {
+        params: {
+          type: "like",
+        },
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -1011,9 +1016,12 @@ export async function dislikeVideo(
 
   try {
     const { data } = await axios.post(
-      `https://api.unitribe.app/ut/api/videos/${videoId}/dislike`,
+      `https://api.unitribe.app/ut/api/videos/${videoId}/react`,
       {},
       {
+        params: {
+          type: "dislike",
+        },
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -1064,11 +1072,16 @@ export interface Comment {
   status: boolean;
   created_at: string;
   updated_at: string;
+  likes_count: number;
+  dislikes_count: number;
+  liked_by_user: boolean;
+  disliked_by_user: boolean;
   user: {
     id: number;
     name: string;
     email: string;
   };
+  likes: any[];
 }
 
 export interface CommentsResponse {
@@ -1184,6 +1197,84 @@ export async function createComment(
     return data;
   } catch (error) {
     handleAPIError(error, "createComment");
+  }
+}
+
+/**
+ * Likes a comment
+ * @param commentId - Comment ID (required)
+ * @param token - Authentication token (required)
+ * @returns API response
+ */
+export async function likeComment(
+  commentId: string | number,
+  token: string
+): Promise<any> {
+  if (!commentId) {
+    throw new ValidationError("Comment ID cannot be empty");
+  }
+
+  if (!token?.trim()) {
+    throw new ValidationError("Authentication token is required");
+  }
+
+  try {
+    const { data } = await axios.post(
+      `https://api.unitribe.app/ut/api/comments/${commentId}/react`,
+      {},
+      {
+        params: {
+          type: "like",
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000,
+      }
+    );
+
+    return data;
+  } catch (error) {
+    handleAPIError(error, "likeComment");
+  }
+}
+
+/**
+ * Dislikes a comment
+ * @param commentId - Comment ID (required)
+ * @param token - Authentication token (required)
+ * @returns API response
+ */
+export async function dislikeComment(
+  commentId: string | number,
+  token: string
+): Promise<any> {
+  if (!commentId) {
+    throw new ValidationError("Comment ID cannot be empty");
+  }
+
+  if (!token?.trim()) {
+    throw new ValidationError("Authentication token is required");
+  }
+
+  try {
+    const { data } = await axios.post(
+      `https://api.unitribe.app/ut/api/comments/${commentId}/react`,
+      {},
+      {
+        params: {
+          type: "dislike",
+        },
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        timeout: 10000,
+      }
+    );
+
+    return data;
+  } catch (error) {
+    handleAPIError(error, "dislikeComment");
   }
 }
 

@@ -20,6 +20,8 @@ import {
   fetchVideoComments,
   createComment,
   registerVideoView,
+  likeComment,
+  dislikeComment,
   Comment as APIComment,
 } from "@/lib/api";
 import { RootState } from "@/store/store";
@@ -74,11 +76,11 @@ const convertCommentToUI = (comment: APIComment): Comment => {
     author: authorName,
     avatar: authorInitials,
     text: comment.body,
-    likes: 0,
-    dislikes: 0,
+    likes: comment.likes_count || 0,
+    dislikes: comment.dislikes_count || 0,
     timeAgo,
-    userLiked: false,
-    userDisliked: false,
+    userLiked: comment.liked_by_user || false,
+    userDisliked: comment.disliked_by_user || false,
   };
 };
 
@@ -124,11 +126,13 @@ const VideoDetails = () => {
     setIsMounted(true);
   }, []);
 
-  // Reset view tracking when video ID changes
+  // Reset view tracking and like/dislike state when video ID changes
   useEffect(() => {
     setViewRegistered(false);
     videoDurationRef.current = 0;
     viewRegistrationInProgressRef.current = false;
+    setUserLiked(false);
+    setUserDisliked(false);
   }, [id]);
 
   // Handle video progress for view tracking
@@ -212,6 +216,10 @@ const VideoDetails = () => {
         // Initialize likes/dislikes from API response
         setLikes(data.likes_count || 0);
         setDislikes(data.dislikes_count || 0);
+
+        // Initialize user's like/dislike status from API response
+        setUserLiked(data.liked_by_user || false);
+        setUserDisliked(data.disliked_by_user || false);
 
         // Fetch related videos if category and token are available
         if (data?.category?.id && token) {
@@ -440,56 +448,128 @@ const VideoDetails = () => {
   };
 
   // Handle comment like/dislike
-  const handleCommentLike = (commentId: number) => {
-    setComments((prev) =>
-      prev.map((comment) => {
-        if (comment.id === commentId) {
-          if (comment.userDisliked) {
+  const handleCommentLike = async (commentId: number) => {
+    if (!token || !id) {
+      alert("Please login to like comments");
+      return;
+    }
+
+    // Store previous state for potential rollback
+    const comment = comments.find((c) => c.id === commentId);
+    if (!comment) return;
+
+    const wasLiked = comment.userLiked;
+    const wasDisliked = comment.userDisliked;
+    const previousLikes = comment.likes;
+    const previousDislikes = comment.dislikes;
+
+    try {
+      // Optimistic update
+      setComments((prev) =>
+        prev.map((c) => {
+          if (c.id === commentId) {
+            if (wasDisliked) {
+              return {
+                ...c,
+                dislikes: c.dislikes - 1,
+                userDisliked: false,
+                likes: wasLiked ? c.likes - 1 : c.likes + 1,
+                userLiked: !wasLiked,
+              };
+            }
             return {
-              ...comment,
-              dislikes: comment.dislikes - 1,
-              userDisliked: false,
-              likes: comment.userLiked ? comment.likes - 1 : comment.likes + 1,
-              userLiked: !comment.userLiked,
+              ...c,
+              likes: wasLiked ? c.likes - 1 : c.likes + 1,
+              userLiked: !wasLiked,
             };
           }
-          return {
-            ...comment,
-            likes: comment.userLiked ? comment.likes - 1 : comment.likes + 1,
-            userLiked: !comment.userLiked,
-          };
-        }
-        return comment;
-      })
-    );
+          return c;
+        })
+      );
+
+      // Call API
+      await likeComment(commentId, token);
+    } catch (error) {
+      console.error("Failed to like comment:", error);
+      // Revert optimistic update on error
+      setComments((prev) =>
+        prev.map((c) => {
+          if (c.id === commentId) {
+            return {
+              ...c,
+              likes: previousLikes,
+              dislikes: previousDislikes,
+              userLiked: wasLiked,
+              userDisliked: wasDisliked,
+            };
+          }
+          return c;
+        })
+      );
+      alert("Failed to like comment. Please try again.");
+    }
   };
 
-  const handleCommentDislike = (commentId: number) => {
-    setComments((prev) =>
-      prev.map((comment) => {
-        if (comment.id === commentId) {
-          if (comment.userLiked) {
+  const handleCommentDislike = async (commentId: number) => {
+    if (!token || !id) {
+      alert("Please login to dislike comments");
+      return;
+    }
+
+    // Store previous state for potential rollback
+    const comment = comments.find((c) => c.id === commentId);
+    if (!comment) return;
+
+    const wasLiked = comment.userLiked;
+    const wasDisliked = comment.userDisliked;
+    const previousLikes = comment.likes;
+    const previousDislikes = comment.dislikes;
+
+    try {
+      // Optimistic update
+      setComments((prev) =>
+        prev.map((c) => {
+          if (c.id === commentId) {
+            if (wasLiked) {
+              return {
+                ...c,
+                likes: c.likes - 1,
+                userLiked: false,
+                dislikes: wasDisliked ? c.dislikes - 1 : c.dislikes + 1,
+                userDisliked: !wasDisliked,
+              };
+            }
             return {
-              ...comment,
-              likes: comment.likes - 1,
-              userLiked: false,
-              dislikes: comment.userDisliked
-                ? comment.dislikes - 1
-                : comment.dislikes + 1,
-              userDisliked: !comment.userDisliked,
+              ...c,
+              dislikes: wasDisliked ? c.dislikes - 1 : c.dislikes + 1,
+              userDisliked: !wasDisliked,
             };
           }
-          return {
-            ...comment,
-            dislikes: comment.userDisliked
-              ? comment.dislikes - 1
-              : comment.dislikes + 1,
-            userDisliked: !comment.userDisliked,
-          };
-        }
-        return comment;
-      })
-    );
+          return c;
+        })
+      );
+
+      // Call API
+      await dislikeComment(commentId, token);
+    } catch (error) {
+      console.error("Failed to dislike comment:", error);
+      // Revert optimistic update on error
+      setComments((prev) =>
+        prev.map((c) => {
+          if (c.id === commentId) {
+            return {
+              ...c,
+              likes: previousLikes,
+              dislikes: previousDislikes,
+              userLiked: wasLiked,
+              userDisliked: wasDisliked,
+            };
+          }
+          return c;
+        })
+      );
+      alert("Failed to dislike comment. Please try again.");
+    }
   };
 
   // Memoize formatted published date to prevent recalculation on re-renders
