@@ -810,6 +810,7 @@ export async function uploadVideo(
 // API response type for user videos
 export interface UserVideosResponse {
   data: Array<{
+    views_count: number;
     id: number;
     video_type: string;
     category_id: number;
@@ -885,12 +886,6 @@ export async function fetchUserVideos(
       );
     }
 
-    // Helper function to generate random view count
-    const getRandomViewCount = (): string => {
-      const views = Math.floor(Math.random() * 10000000) + 100;
-      return views.toString();
-    };
-
     // Transform API response to Video format
     const videos = data.data
       .filter(
@@ -921,7 +916,7 @@ export async function fetchUserVideos(
           title: video.title || "Untitled Video",
           description: video.description || "",
           thumbnail,
-          viewCount: getRandomViewCount(),
+          viewCount: video.views_count?.toString() || "0",
           channel: {
             channelId: userId,
             channelTitle: userName,
@@ -1225,7 +1220,10 @@ export async function fetchUserProfile(token: string): Promise<User> {
  * @param token - Authentication token (required)
  * @returns Updated user data
  */
-export async function updateProfileImage(image: File, token: string): Promise<User> {
+export async function updateProfileImage(
+  image: File,
+  token: string
+): Promise<User> {
   if (!token?.trim()) {
     throw new ValidationError("Authentication token is required");
   }
@@ -1309,4 +1307,3 @@ export async function updateName(name: string, token: string): Promise<User> {
     handleAPIError(error, "updateName");
   }
 }
-
